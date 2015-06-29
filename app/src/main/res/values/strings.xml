@@ -1,0 +1,33 @@
+<resources>
+    <string name="app_name">Upload Street Parking</string>
+
+    <string name="line">LINE</string>
+    <string name="meter">METER</string>
+    <string name="carPark">CARPARK</string>
+
+    <!--Line Layout-->
+    <string name="startPoint">1. <u>Start Point</u></string>
+    <string name="endPoint">2. <u>End Point</u></string>
+
+    <string name="btnSat">Satellite</string>
+    <string name="btnMap">Map</string>
+    <string name="location">Location</string>
+    <string name="btnPic">Take A Picture</string>
+    <string name="btnFree">FREE 24/7</string>
+    <string name="btnAddRestriction">Add Restriction</string>
+    <string name="btnSubmit">Submit</string>
+
+    <string name="startPointAddress">Input start point address</string>
+    <string name="endPointAddress">Input end point address</string>
+    <string name="spaceType">Space Type</string>
+    <string name="numberOfSpaces">Number of spaces</string>
+    <string name="restrictions">Restrictions</string>
+    <string name="startTime">Start time</string>
+    <string name="endTime">End time</string>
+    <string name="day">Day</string>
+    <string name="time">Time</string>
+    <string name="price">Price</string>
+
+    <!--Meter Layout-->
+    <!--CarPark Layout-->
+</resources>
