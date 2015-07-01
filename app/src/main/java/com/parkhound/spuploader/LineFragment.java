@@ -2,6 +2,7 @@ package com.parkhound.spuploader;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.TimePickerDialog;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -14,13 +15,19 @@ import android.os.Handler;
 import android.os.ResultReceiver;
 import android.provider.MediaStore;
 import android.support.v4.app.Fragment;
+import android.text.InputType;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.TimePicker;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -45,7 +52,6 @@ public class LineFragment extends Fragment implements
         OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
     static final String TAG = "parking street";
 
-    static final LatLng melbourne = new LatLng(-37.815, 144.966);
     private SupportMapFragment fragment;
     private static View rootView;
     private GoogleMap mMap;
@@ -90,6 +96,16 @@ public class LineFragment extends Fragment implements
      */
     private AddressResultReceiver mResultReceiver;
 
+    private Spinner mSpinnerSpaceType;
+    private Spinner mSpinnerResType;
+    private Spinner mSpinnerDur;
+    private Spinner mSpinnerStartDay;
+    private Spinner mSpinnerEndDay;
+    private EditText mStartTime;
+    private EditText mEndTime;
+    private static final int SHOW_TIMEPICK = 1;
+    private TimePickerDialog timePickerDialog;
+
     // Photo album for this application
     private static final String albumName = "CameraSample";
     private File mAlbumDir = null;
@@ -115,7 +131,6 @@ public class LineFragment extends Fragment implements
     public View onCreateView(LayoutInflater inflater,
                              ViewGroup container,
                              Bundle savedInstanceState) {
-
         if(savedInstanceState == null) {
             // To avoid tab crash after second entering, remove it before creating it every time.
             if (rootView != null) {
@@ -125,9 +140,9 @@ public class LineFragment extends Fragment implements
             }
 
             try{
-                if(rootView == null) {
+                //if(rootView == null) {
                     rootView = inflater.inflate(R.layout.frg_line, container, false);
-                }
+                //}
 
                 fragment = (SupportMapFragment) getChildFragmentManager()
                         .findFragmentById(R.id.map);
@@ -137,10 +152,18 @@ public class LineFragment extends Fragment implements
             }
         }
 
+        initLocation(savedInstanceState);
+        initRestrictions();
+
+        return rootView;
+    }
+
+    public void initLocation(Bundle savedInstanceState) {
         mResultReceiver = new AddressResultReceiver(new Handler());
 
         startAddressTextView = (TextView) rootView.findViewById(R.id.startAddressView);
         btnPosStart = (Button) rootView.findViewById(R.id.startLocation);
+        btnPosStart.requestFocus();
         btnPosStart.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -164,9 +187,146 @@ public class LineFragment extends Fragment implements
 
         updateUIWidgets();
         buildGoogleApiClient();
-
-        return rootView;
     }
+
+    public void initRestrictions() {
+        ArrayAdapter adapter = ArrayAdapter.createFromResource(
+                rootView.getContext(),
+                R.array.spaceType,
+                android.R.layout.simple_spinner_item);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        mSpinnerSpaceType = (Spinner) rootView.findViewById(R.id.spinnerSpaceType);
+        mSpinnerSpaceType.setAdapter(adapter);
+        mSpinnerSpaceType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                //showToast(parent.getItemAtPosition(position).toString());
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+
+        adapter = ArrayAdapter.createFromResource(
+                rootView.getContext(),
+                R.array.restrictionType,
+                android.R.layout.simple_spinner_item);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        mSpinnerResType = (Spinner) rootView.findViewById(R.id.spinnerRestrictionType);
+        mSpinnerResType.setAdapter(adapter);
+        mSpinnerResType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                //showToast(parent.getItemAtPosition(position).toString());
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+
+        adapter = ArrayAdapter.createFromResource(
+                rootView.getContext(),
+                R.array.duration,
+                android.R.layout.simple_spinner_item);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        mSpinnerDur = (Spinner) rootView.findViewById(R.id.spinnerRestrictionDuration);
+        mSpinnerDur.setAdapter(adapter);
+        mSpinnerDur.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                //showToast(parent.getItemAtPosition(position).toString());
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+
+        adapter = ArrayAdapter.createFromResource(
+                rootView.getContext(),
+                R.array.day,
+                android.R.layout.simple_spinner_item);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        mSpinnerStartDay = (Spinner) rootView.findViewById(R.id.spinnerStartDay);
+        mSpinnerStartDay.setAdapter(adapter);
+        mSpinnerStartDay.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                //showToast(parent.getItemAtPosition(position).toString());
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+
+        mSpinnerEndDay = (Spinner) rootView.findViewById(R.id.spinnerEndDay);
+        mSpinnerEndDay.setAdapter(adapter);
+        mSpinnerEndDay.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                //showToast(parent.getItemAtPosition(position).toString());
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+
+        mStartTime = (EditText) rootView.findViewById(R.id.editTextStartTime);
+        mStartTime.setInputType(InputType.TYPE_NULL);
+        //mStartTime.requestFocus();
+        mEndTime = (EditText) rootView.findViewById(R.id.editTextEndTime);
+        mEndTime.setInputType(InputType.TYPE_NULL);
+
+        mStartTime.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                //Message msg = new Message();
+                //msg.what = SHOW_TIMEPICK;
+                //timeHandler.sendMessage(msg);
+
+                TimePickerDialog timePickerDialog = new TimePickerDialog(rootView.getContext(),
+                        new TimePickerDialog.OnTimeSetListener() {
+                    public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
+                        mStartTime.setText(new StringBuilder().append(hourOfDay).append(":")
+                                .append((minute < 10) ? "0" + minute : minute));
+                    }
+                }, 0, 0, false);
+
+                timePickerDialog.show();
+            }
+        });
+
+        mEndTime.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                TimePickerDialog timePickerDialog = new TimePickerDialog(rootView.getContext(),
+                        new TimePickerDialog.OnTimeSetListener() {
+                            public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
+                                mEndTime.setText(new StringBuilder().append(hourOfDay).append(":")
+                                        .append((minute < 10) ? "0" + minute : minute));
+                            }
+                        }, 0, 0, false);
+                timePickerDialog.show();
+            }
+        });
+    }
+
+    /*
+    private Handler timeHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case SHOW_TIMEPICK:
+                    timePickerDialog.show();
+                    break;
+            }
+        }
+    };
+    */
 
     @Override
     public void onMapReady(final GoogleMap map) {

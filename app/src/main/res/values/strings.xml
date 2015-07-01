@@ -21,16 +21,17 @@
     <string name="btnMap">Map</string>
     <string name="location">Location</string>
     <string name="btnPic">Take A Picture</string>
+    <string name="parkSpace">Park Space</string>
+    <string name="restrictions">Park Restrictions</string>
     <string name="btnFree">FREE 24/7</string>
     <string name="btnAddRestriction">Add Restriction</string>
     <string name="btnSubmit">Submit</string>
 
-    <string name="startPointAddress">Input start point address</string>
-    <string name="endPointAddress">Input end point address</string>
     <string name="numberOfSpaces">Number of spaces</string>
     <string name="startTime">Start time</string>
     <string name="endTime">End time</string>
-    <string name="day">Day</string>
+    <string name="startDay">Start Day</string>
+    <string name="endDay">End Day</string>
     <string name="time">Time</string>
     <string name="price">Price</string>
 
@@ -41,7 +42,7 @@
         <item>Median</item>
     </string-array>
 
-    <string name="restrictions">Restriction Type</string>
+    <string name="restrictionType">Restriction Type</string>
     <string-array name="restrictionType">
         <item>Free</item>
         <item>Metered</item>
@@ -55,7 +56,7 @@
     </string-array>
 
     <string name="restrictionDuration">Restriction Duration</string>
-    <string-array name="Duration">
+    <string-array name="duration">
         <item>5 mins</item>
         <item>10 mins</item>
         <item>15 mins</item>
@@ -64,6 +65,16 @@
         <item>2 Hours</item>
         <item>3 Hours</item>
         <item>4 Hours</item>
+    </string-array>
+
+    <string-array name="day">
+        <item>Monday</item>
+        <item>Tuesday</item>
+        <item>Wednesday</item>
+        <item>Thursday</item>
+        <item>Friday</item>
+        <item>Saturday</item>
+        <item>Sunday</item>
     </string-array>
 
     <!--Meter Layout-->

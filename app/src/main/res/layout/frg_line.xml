@@ -84,12 +84,19 @@
                 android:layout_width="wrap_content"
                 android:visibility="visible"/>
 
+            <TextView
+                style="@style/AppTheme"
+                android:id="@+id/textViewParkSpace"
+                android:text="@string/parkSpace"
+                android:textStyle="bold"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"/>
             <Spinner
                 style="@style/AppTheme"
-                android:id="@+id/SpinnerSpaceType"
+                android:id="@+id/spinnerSpaceType"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:entries="@array/spaceType"
                 android:prompt="@string/spaceType"
                 android:spinnerMode="dialog">
             </Spinner>
@@ -99,8 +106,7 @@
                 android:inputType="number"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/numberOfSpaces"
-                android:textColor="@color/abc_search_url_text"/>
+                android:hint="@string/numberOfSpaces"/>
 
             <TextView
                 style="@style/AppTheme"
@@ -108,7 +114,8 @@
                 android:text="@string/restrictions"
                 android:textStyle="bold"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"/>
             <Button
                 style="@style/AppTheme"
                 android:id="@+id/btnFree"
@@ -117,19 +124,17 @@
                 android:layout_width="match_parent"/>
             <Spinner
                 style="@style/AppTheme"
-                android:id="@+id/SpinnerRestrictionType"
+                android:id="@+id/spinnerRestrictionType"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:entries="@array/restrictionType"
-                android:prompt="@string/restrictions"
+                android:prompt="@string/restrictionType"
                 android:spinnerMode="dialog">
             </Spinner>
             <Spinner
                 style="@style/AppTheme"
-                android:id="@+id/SpinnerRestrictionDuration"
+                android:id="@+id/spinnerRestrictionDuration"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:entries="@array/Duration"
                 android:prompt="@string/restrictionDuration"
                 android:spinnerMode="dialog">
             </Spinner>
@@ -140,27 +145,27 @@
                 android:text="@string/startTime"
                 android:textStyle="bold"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"/>
             <LinearLayout
                 android:orientation="horizontal"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
-                <EditText
+                <Spinner
                     style="@style/AppTheme"
-                    android:id="@+id/editTextStartDay"
+                    android:id="@+id/spinnerStartDay"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:hint="@string/day"
-                    android:textColor="@color/abc_search_url_text"
-                    android:layout_weight="1"/>
+                    android:prompt="@string/startDay"
+                    android:spinnerMode="dialog"
+                    android:layout_weight="1">
+                </Spinner>
                 <EditText
                     style="@style/AppTheme"
                     android:id="@+id/editTextStartTime"
-                    android:inputType="number"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:hint="@string/time"
-                    android:textColor="@color/abc_search_url_text"
                     android:layout_weight="1"/>
             </LinearLayout>
 
@@ -170,27 +175,27 @@
                 android:text="@string/endTime"
                 android:textStyle="bold"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"/>
             <LinearLayout
                 android:orientation="horizontal"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
-                <EditText
+                <Spinner
                     style="@style/AppTheme"
-                    android:id="@+id/editTextEndDay"
+                    android:id="@+id/spinnerEndDay"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:hint="@string/day"
-                    android:textColor="@color/abc_search_url_text"
-                    android:layout_weight="1"/>
+                    android:prompt="@string/endDay"
+                    android:spinnerMode="dialog"
+                    android:layout_weight="1">
+                </Spinner>
                 <EditText
                     style="@style/AppTheme"
                     android:id="@+id/editTextEndTime"
-                    android:inputType="number"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:hint="@string/time"
-                    android:textColor="@color/abc_search_url_text"
                     android:layout_weight="1"/>
             </LinearLayout>
             <EditText
@@ -199,8 +204,7 @@
                 android:inputType="number"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/price"
-                android:textColor="@color/abc_search_url_text"/>
+                android:hint="@string/price"/>
             <Button
                 style="@style/AppTheme"
                 android:id="@+id/btnAddRestriction"
@@ -214,7 +218,8 @@
                 android:text="@string/endPoint"
                 android:textStyle="bold"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"/>
                 <LinearLayout
                     android:orientation="horizontal"
                     android:layout_width="match_parent"
