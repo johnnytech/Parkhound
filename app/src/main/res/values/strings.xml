@@ -9,6 +9,14 @@
     <string name="startPoint">1. <u>Start Point</u></string>
     <string name="endPoint">2. <u>End Point</u></string>
 
+    <string name="fetch_address">Fetch address</string>
+    <string name="address_found">Address found</string>
+    <string name="no_geocoder_available">No geocoder available</string>
+    <string name="no_address_found">Sorry, no address found</string>
+    <string name="no_location_data_provided">No location data provided</string>
+    <string name="service_not_available">Sorry, the service is not available</string>
+    <string name="invalid_lat_long_used">Invalid latitude or longitude used</string>
+
     <string name="btnSat">Satellite</string>
     <string name="btnMap">Map</string>
     <string name="location">Location</string>
@@ -19,14 +27,44 @@
 
     <string name="startPointAddress">Input start point address</string>
     <string name="endPointAddress">Input end point address</string>
-    <string name="spaceType">Space Type</string>
     <string name="numberOfSpaces">Number of spaces</string>
-    <string name="restrictions">Restrictions</string>
     <string name="startTime">Start time</string>
     <string name="endTime">End time</string>
     <string name="day">Day</string>
     <string name="time">Time</string>
     <string name="price">Price</string>
+
+    <string name="spaceType">Space Type</string>
+    <string-array name="spaceType">
+        <item>Parallel</item>
+        <item>Angle</item>
+        <item>Median</item>
+    </string-array>
+
+    <string name="restrictions">Restriction Type</string>
+    <string-array name="restrictionType">
+        <item>Free</item>
+        <item>Metered</item>
+        <item>Clearway</item>
+        <item>Permit</item>
+        <item>No Standing</item>
+        <item>Disabled</item>
+        <item>Loading Zone</item>
+        <item>Bus Zone</item>
+        <item>Mail Zone</item>
+    </string-array>
+
+    <string name="restrictionDuration">Restriction Duration</string>
+    <string-array name="Duration">
+        <item>5 mins</item>
+        <item>10 mins</item>
+        <item>15 mins</item>
+        <item>30 mins</item>
+        <item>1 Hour</item>
+        <item>2 Hours</item>
+        <item>3 Hours</item>
+        <item>4 Hours</item>
+    </string-array>
 
     <!--Meter Layout-->
     <!--CarPark Layout-->
