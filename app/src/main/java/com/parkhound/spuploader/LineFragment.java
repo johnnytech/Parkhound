@@ -16,11 +16,13 @@ import android.os.Handler;
 import android.os.ResultReceiver;
 import android.provider.MediaStore;
 import android.support.v4.app.Fragment;
+import android.text.Html;
 import android.text.InputType;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -52,42 +54,59 @@ public class LineFragment extends Fragment implements
     static final String TAG = "parking street";
     protected static final String ADDRESS_REQUESTED_KEY = "address-request-pending";
     protected static final String LOCATION_ADDRESS_KEY = "location-address";
-    private static final String albumName = "CameraSample";
+    private static final String ALBUM_NAME = "CameraSample";
 
     private static View rootView;
+    private static int lineID = 1;
 
     // Location
     private Button btnPosStart;
     private Button btnPosEnd;
-    private TextView startAddressTextView;
-    private TextView endAddressTextView;
+    private TextView tvStartAddress;
+    private TextView tvEndAddress;
+
     private GoogleMap mMap;
     protected GoogleApiClient mGoogleApiClient;
     protected Location mLastLocation;
     protected boolean mAddressRequested;
     protected String mAddressOutput;
     private AddressResultReceiver mResultReceiver;
+    static final int ID_POS_START = 1;
+    static final int ID_POS_END = 2;
+    static int btnID = ID_POS_START;
 
     // Restrictions
-    private Spinner mSpinnerSpaceType;
-    private Spinner mSpinnerResType;
-    private Spinner mSpinnerDur;
-    private Spinner mSpinnerStartDay;
-    private Spinner mSpinnerEndDay;
-    private EditText mStartTime;
-    private EditText mEndTime;
+    private Spinner spinnerSpaceType;
+    private Spinner spinnerResType;
+    private Spinner spinnerDur;
+    private Spinner spinnerStartDay;
+    private Spinner spinnerEndDay;
+    private EditText etStartTime;
+    private EditText etEndTime;
+    private EditText etPrice;
+    private Button btnFree;
+    private Button btnAddRestrictioins;
+    private Button btnSubmit;
+
+    private String mSpaceType;
+    private String mResType;
+    private String mResDur;
+    private String mStartDay;
+    private String mEndDay;
+    private String mStartTime;
+    private String mEndTime;
+    private String mPrice;
 
     // Pictures
-    private boolean bIsButtonPressed = false;
-    private File mAlbumDir = null;
-    private String mCurrentPhotoPath;
     static final int REQUEST_TAKE_PHOTO = 1;
-    private ImageView imgLarge;
-    private ImageView mImageViewStart;
-    private ImageView mImageViewEnd;
     private final int imageTargetW = 100;
     private final int imageTargetH = 100;
-    private Button btnSubmit;
+    private ImageView mImageViewStart;
+    private ImageView mImageViewEnd;
+    private String mCurrentPhotoPath;
+    static final int ID_PIC_START = 1;
+    static final int ID_PIC_END = 2;
+    static int picID = ID_PIC_START;
 
     @Override
     public void onAttach(Activity activity) {
@@ -162,21 +181,23 @@ public class LineFragment extends Fragment implements
     public void initLocation(Bundle savedInstanceState) {
         mResultReceiver = new AddressResultReceiver(new Handler());
 
-        startAddressTextView = (TextView) rootView.findViewById(R.id.startAddressView);
+        tvStartAddress = (TextView) rootView.findViewById(R.id.startAddressView);
         btnPosStart = (Button) rootView.findViewById(R.id.startLocation);
         btnPosStart.requestFocus();
         btnPosStart.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                btnID = ID_POS_START;
                 fetchAddressButtonHandler();
             }
         });
 
-        endAddressTextView = (TextView) rootView.findViewById(R.id.endAddressView);
+        tvEndAddress = (TextView) rootView.findViewById(R.id.endAddressView);
         btnPosEnd = (Button) rootView.findViewById(R.id.endLocation);
         btnPosEnd.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                btnID = ID_POS_END;
                 fetchAddressButtonHandler();
             }
         });
@@ -189,39 +210,65 @@ public class LineFragment extends Fragment implements
     }
 
     public void initRestrictions() {
-        mSpinnerSpaceType = (Spinner) rootView.findViewById(R.id.spinnerSpaceType);
-        mSpinnerResType = (Spinner) rootView.findViewById(R.id.spinnerRestrictionType);
-        mSpinnerDur = (Spinner) rootView.findViewById(R.id.spinnerRestrictionDuration);
-        mSpinnerStartDay = (Spinner) rootView.findViewById(R.id.spinnerStartDay);
-        mSpinnerEndDay = (Spinner) rootView.findViewById(R.id.spinnerEndDay);
+        spinnerSpaceType = (Spinner) rootView.findViewById(R.id.spinnerSpaceType);
+        spinnerResType = (Spinner) rootView.findViewById(R.id.spinnerRestrictionType);
+        spinnerDur = (Spinner) rootView.findViewById(R.id.spinnerRestrictionDuration);
+        spinnerStartDay = (Spinner) rootView.findViewById(R.id.spinnerStartDay);
+        spinnerEndDay = (Spinner) rootView.findViewById(R.id.spinnerEndDay);
 
-        mStartTime = (EditText) rootView.findViewById(R.id.editTextStartTime);
-        mStartTime.setInputType(InputType.TYPE_NULL);
-        mEndTime = (EditText) rootView.findViewById(R.id.editTextEndTime);
-        mEndTime.setInputType(InputType.TYPE_NULL);
+        ArrayAdapter adapter = ArrayAdapter.createFromResource(rootView.getContext(),
+                R.array.spaceType, android.R.layout.simple_spinner_item);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerSpaceType.setAdapter(adapter);
 
-        mStartTime.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                TimePickerDialog timePickerDialog = new TimePickerDialog(rootView.getContext(),
-                        new TimePickerDialog.OnTimeSetListener() {
-                    public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
-                        mStartTime.setText(new StringBuilder().append(hourOfDay).append(":")
-                                .append((minute < 10) ? "0" + minute : minute));
-                    }
-                }, 0, 0, false);
+        adapter = ArrayAdapter.createFromResource(rootView.getContext(),
+                R.array.restrictionType, android.R.layout.simple_spinner_item);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerResType.setAdapter(adapter);
 
-                timePickerDialog.show();
-            }
-        });
+        adapter = ArrayAdapter.createFromResource(rootView.getContext(),
+                R.array.duration, android.R.layout.simple_spinner_item);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerDur.setAdapter(adapter);
 
-        mEndTime.setOnClickListener(new View.OnClickListener() {
+        adapter = ArrayAdapter.createFromResource(rootView.getContext(),
+                R.array.day, android.R.layout.simple_spinner_item);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerStartDay.setAdapter(adapter);
+
+        adapter = ArrayAdapter.createFromResource(rootView.getContext(),
+                R.array.day, android.R.layout.simple_spinner_item);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerEndDay.setAdapter(adapter);
+
+        etStartTime = (EditText) rootView.findViewById(R.id.editTextStartTime);
+        etStartTime.setInputType(InputType.TYPE_NULL);
+        etEndTime = (EditText) rootView.findViewById(R.id.editTextEndTime);
+        etEndTime.setInputType(InputType.TYPE_NULL);
+        etPrice = (EditText) rootView.findViewById(R.id.editTextPrice);
+
+        etStartTime.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 TimePickerDialog timePickerDialog = new TimePickerDialog(rootView.getContext(),
                         new TimePickerDialog.OnTimeSetListener() {
                             public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
-                                mEndTime.setText(new StringBuilder().append(hourOfDay).append(":")
+                                etStartTime.setText(new StringBuilder().append(hourOfDay).append(":")
+                                        .append((minute < 10) ? "0" + minute : minute));
+                            }
+                        }, 0, 0, false);
+
+                timePickerDialog.show();
+            }
+        });
+
+        etEndTime.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                TimePickerDialog timePickerDialog = new TimePickerDialog(rootView.getContext(),
+                        new TimePickerDialog.OnTimeSetListener() {
+                            public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
+                                etEndTime.setText(new StringBuilder().append(hourOfDay).append(":")
                                         .append((minute < 10) ? "0" + minute : minute));
                             }
                         }, 0, 0, false);
@@ -229,53 +276,24 @@ public class LineFragment extends Fragment implements
             }
         });
 
-        updateRestrictions();
-    }
+        btnFree = (Button) rootView.findViewById(R.id.btnFree);
+        btnFree.setOnClickListener(new Button.OnClickListener() {
+            public void onClick(View v) {
+                updateRestrictionInfo(true);
+            }
+        });
 
-    public void updateRestrictions() {
+        btnAddRestrictioins = (Button) rootView.findViewById(R.id.btnAddRestriction);
+        btnAddRestrictioins.setOnClickListener(new Button.OnClickListener() {
+            public void onClick(View v) {
+                addRestrictions();
+            }
+        });
+
         btnSubmit = (Button) rootView.findViewById(R.id.btnSubmit);
         btnSubmit.setOnClickListener(new Button.OnClickListener() {
             public void onClick(View v) {
-                LayoutInflater inflater = LayoutInflater.from(rootView.getContext());
-                View uploadDialog = inflater.inflate(R.layout.dialog_upload, null);
-
-                TextView info = (TextView) uploadDialog.findViewById(R.id.textViewResInfo);
-                info.setText("Restrictions: " + mSpinnerResType.getSelectedItem().toString() +
-                        ", " + mSpinnerDur.getSelectedItem().toString() +
-                        ", " + mSpinnerStartDay.getSelectedItem().toString() +
-                        "-" + mSpinnerEndDay.getSelectedItem().toString() +
-                        ", " + mStartTime.getText() + "-" + mEndTime.getText());
-                info = (TextView) uploadDialog.findViewById(R.id.textViewFreeInfo);
-                info.setText("Free: ");
-
-                info = (TextView) uploadDialog.findViewById(R.id.textViewStartPointPos);
-                info.setText("Start Pos: " + "(" + mLastLocation.getLatitude() + ", " +
-                        mLastLocation.getLongitude() + ")");
-                info = (TextView) uploadDialog.findViewById(R.id.textViewStartPointAddress);
-                info.setText("Start Address: ");
-
-                info = (TextView) uploadDialog.findViewById(R.id.textViewEndPointPos);
-                info.setText("End Pos: " + "(" + mLastLocation.getLatitude() + ", " +
-                        mLastLocation.getLongitude() + ")");
-                info = (TextView) uploadDialog.findViewById(R.id.textViewEndPointAddress);
-                info.setText("Start Address: ");
-
-                final AlertDialog dialog = new AlertDialog.Builder(rootView.getContext()).create();
-                dialog.setTitle("Upload Park Info");
-                dialog.setButton(DialogInterface.BUTTON_POSITIVE, "Confirm", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        dialog.dismiss();
-                    }
-                });
-                dialog.setButton(DialogInterface.BUTTON_NEGATIVE, "Cancel", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        dialog.dismiss();
-                    }
-                });
-                dialog.setView(uploadDialog);
-                dialog.show();
+                uploadParkInfo();
             }
         });
     }
@@ -285,6 +303,7 @@ public class LineFragment extends Fragment implements
         btnPicStart.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                picID = ID_PIC_START;
                 dispatchTakePictureIntent();
             }
         });
@@ -293,6 +312,7 @@ public class LineFragment extends Fragment implements
         btnPicEnd.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                picID = ID_PIC_END;
                 dispatchTakePictureIntent();
             }
         });
@@ -300,31 +320,16 @@ public class LineFragment extends Fragment implements
         mImageViewStart = (ImageView) rootView.findViewById(R.id.imageViewStart);
         mImageViewStart.setOnClickListener(new View.OnClickListener() {
             public void onClick(View paramView) {
-                LayoutInflater inflater = LayoutInflater.from(rootView.getContext());
-                View imgEntryView = inflater.inflate(R.layout.dialog_photo_entry, null);
-                final AlertDialog dialog = new AlertDialog.Builder(rootView.getContext()).create();
-                imgLarge = (ImageView) imgEntryView.findViewById(R.id.largeImage);
-                BitmapFactory.Options bmOptions = new BitmapFactory.Options();
-
-                // Decode the image file into a Bitmap sized to fill the View
-                bmOptions.inJustDecodeBounds = false;
-                bmOptions.inSampleSize = 1;
-
-                Bitmap bitmap = BitmapFactory.decodeFile(mCurrentPhotoPath, bmOptions);
-                imgLarge.setImageBitmap(bitmap);
-                imgLarge.setVisibility(View.VISIBLE);
-
-                dialog.setView(imgEntryView);
-                dialog.show();
-                imgEntryView.setOnClickListener(new View.OnClickListener() {
-                    public void onClick(View paramView) {
-                        dialog.cancel();
-                    }
-                });
+                enlargePic();
             }
         });
 
         mImageViewEnd = (ImageView) rootView.findViewById(R.id.imageViewEnd);
+        mImageViewEnd.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View paramView) {
+                enlargePic();
+            }
+        });
     }
 
     @Override
@@ -378,7 +383,7 @@ public class LineFragment extends Fragment implements
 
         Button btnSat = (Button) rootView.findViewById(R.id.satView);
         btnSat.setOnClickListener(new Button.OnClickListener() {
-            public void onClick(View v){
+            public void onClick(View v) {
                 mMap.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
             }
         });
@@ -412,7 +417,6 @@ public class LineFragment extends Fragment implements
                 return;
             }
             startIntentService();
-            bIsButtonPressed = true;
         }
     }
 
@@ -441,7 +445,6 @@ public class LineFragment extends Fragment implements
 
     public void fetchAddressButtonHandler() {
         mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
-        bIsButtonPressed = true;
         getCurrentAddress();
     }
 
@@ -459,7 +462,10 @@ public class LineFragment extends Fragment implements
     }
 
     protected void displayAddressOutput() {
-        startAddressTextView.setText(mAddressOutput);
+        if (btnID == ID_POS_START)
+            tvStartAddress.setText(mAddressOutput);
+        else
+            tvEndAddress.setText(mAddressOutput);
 
         LatLng pos = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
         DecimalFormat df = new DecimalFormat("#.0000");
@@ -473,20 +479,23 @@ public class LineFragment extends Fragment implements
                 .position(pos)
                 .draggable(true));
 
-        if (bIsButtonPressed) {
-            marker.setTitle("Current Location");
-            bIsButtonPressed = false;
+        if (btnID == ID_POS_START) {
+            marker.setTitle("Start Position");
         } else {
-            marker.setTitle("Geo-coordinator");
+            marker.setTitle("End Position");
         }
         marker.showInfoWindow();
     }
 
     private void updateUIWidgets() {
         if (mAddressRequested) {
-            btnPosStart.setEnabled(false);
+            if (btnID == ID_POS_START)
+                btnPosStart.setEnabled(false);
+            else
+                btnPosEnd.setEnabled(false);
         } else {
             btnPosStart.setEnabled(true);
+            btnPosEnd.setEnabled(true);
         }
     }
 
@@ -509,6 +518,99 @@ public class LineFragment extends Fragment implements
             mAddressRequested = false;
             updateUIWidgets();
         }
+    }
+
+    public void updateRestrictionInfo (boolean free) {
+        if (free) {
+            spinnerStartDay.setSelection(0);
+            spinnerEndDay.setSelection(0);
+            etStartTime.setText("0.00");
+            etEndTime.setText("0.00");
+            etPrice.setText("0.0");
+        }
+
+        getRestrictionInfo();
+    }
+
+    public void addRestrictions() {
+        getRestrictionInfo();
+
+        LayoutInflater inflater = LayoutInflater.from(rootView.getContext());
+        View uploadDialog = inflater.inflate(R.layout.dialog_upload, null);
+
+        /*
+        info = (TextView) uploadDialog.findViewById(R.id.textViewStartPointPos);
+        info.setText("Start Pos: " + "(" + mLastLocation.getLatitude() + ", " +
+                mLastLocation.getLongitude() + ")");
+        info = (TextView) uploadDialog.findViewById(R.id.textViewStartPointAddress);
+        info.setText("Start Address: ");
+
+        info = (TextView) uploadDialog.findViewById(R.id.textViewEndPointPos);
+        info.setText("End Pos: " + "(" + mLastLocation.getLatitude() + ", " +
+                mLastLocation.getLongitude() + ")");
+        info = (TextView) uploadDialog.findViewById(R.id.textViewEndPointAddress);
+        info.setText("Start Address: ");
+        */
+
+        TextView info = (TextView) uploadDialog.findViewById(R.id.textViewResInfo);
+        info.setText(Html.fromHtml("<b>Restriction: </b>"));
+        info.append("\n" + mResType + ", " + mResDur + ", " +
+                mStartDay + "-" + mEndDay + ", " + mStartTime + "-" + mEndTime);
+
+        info = (TextView) uploadDialog.findViewById(R.id.textViewFreeInfo);
+        info.setText(Html.fromHtml("<b>Free Duration: </b>"));
+        info.append("\n" + mStartDay + "-" + mEndDay);
+
+        info = (TextView) uploadDialog.findViewById(R.id.textViewPrice);
+        info.setText(Html.fromHtml("<b>Price: </b>" + mPrice + " AUD/Hour"));
+
+        final AlertDialog dialog = new AlertDialog.Builder(rootView.getContext()).create();
+        dialog.setTitle("Add Restriction");
+        dialog.setButton(DialogInterface.BUTTON_POSITIVE, "Confirm", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+            }
+        });
+        dialog.setButton(DialogInterface.BUTTON_NEGATIVE, "Cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+            }
+        });
+        dialog.setView(uploadDialog);
+        dialog.show();
+    }
+
+    public void getRestrictionInfo () {
+        mSpaceType = spinnerSpaceType.getSelectedItem().toString();
+        mResType = spinnerResType.getSelectedItem().toString();
+        mResDur = spinnerDur.getSelectedItem().toString();
+        mStartDay = spinnerStartDay.getSelectedItem().toString();
+        mEndDay = spinnerEndDay.getSelectedItem().toString();
+        mStartTime = etStartTime.getText().toString();
+        mEndTime = etEndTime.getText().toString();
+        mPrice = etPrice.getText().toString();
+    }
+
+    public void uploadParkInfo() {
+        final AlertDialog dialog = new AlertDialog.Builder(rootView.getContext()).create();
+        dialog.setTitle("UPLOAD PARK INFO");
+        dialog.setMessage("Upload Line ID: " + lineID);
+        dialog.setButton(DialogInterface.BUTTON_POSITIVE, "Confirm", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                lineID++;
+                dialog.dismiss();
+            }
+        });
+        dialog.setButton(DialogInterface.BUTTON_NEGATIVE, "Cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+            }
+        });
+        dialog.show();
     }
 
     private void dispatchTakePictureIntent() {
@@ -544,7 +646,7 @@ public class LineFragment extends Fragment implements
         File storageDir = null;
         if (Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
             storageDir = new File (Environment.getExternalStoragePublicDirectory(
-                    Environment.DIRECTORY_PICTURES), albumName);
+                    Environment.DIRECTORY_PICTURES), ALBUM_NAME);
             if (storageDir != null) {
                 if (! storageDir.mkdirs()) {
                     if (! storageDir.exists()){
@@ -580,8 +682,14 @@ public class LineFragment extends Fragment implements
         bmOptions.inSampleSize = scaleFactor;
 
         Bitmap bitmap = BitmapFactory.decodeFile(mCurrentPhotoPath, bmOptions);
-        mImageViewStart.setImageBitmap(bitmap);
-        mImageViewStart.setVisibility(View.VISIBLE);
+
+        if (picID == ID_PIC_START) {
+            mImageViewStart.setImageBitmap(bitmap);
+            mImageViewStart.setVisibility(View.VISIBLE);
+        } else {
+            mImageViewEnd.setImageBitmap(bitmap);
+            mImageViewEnd.setVisibility(View.VISIBLE);
+        }
     }
 
     private void galleryAddPic() {
@@ -590,5 +698,30 @@ public class LineFragment extends Fragment implements
         Uri contentUri = Uri.fromFile(f);
         mediaScanIntent.setData(contentUri);
         this.getActivity().sendBroadcast(mediaScanIntent);
+    }
+
+    private void enlargePic() {
+        LayoutInflater inflater = LayoutInflater.from(rootView.getContext());
+        View imgEntryView = inflater.inflate(R.layout.dialog_photo_entry, null);
+
+        // Decode the image file into a Bitmap sized to fill the View
+        BitmapFactory.Options bmOptions = new BitmapFactory.Options();
+        bmOptions.inJustDecodeBounds = false;
+        bmOptions.inSampleSize = 1;
+
+        Bitmap bitmap = BitmapFactory.decodeFile(mCurrentPhotoPath, bmOptions);
+
+        ImageView imgLarge = (ImageView) imgEntryView.findViewById(R.id.largeImage);
+        imgLarge.setImageBitmap(bitmap);
+        imgLarge.setVisibility(View.VISIBLE);
+
+        final AlertDialog dialog = new AlertDialog.Builder(rootView.getContext()).create();
+        dialog.setView(imgEntryView);
+        dialog.show();
+        imgEntryView.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View paramView) {
+                dialog.cancel();
+            }
+        });
     }
 }
