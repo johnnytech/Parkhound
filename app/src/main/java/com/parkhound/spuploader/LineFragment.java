@@ -7,6 +7,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.location.Geocoder;
 import android.location.Location;
 import android.net.Uri;
@@ -41,6 +42,8 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
 
 import java.io.File;
 import java.io.IOException;
@@ -71,6 +74,11 @@ public class LineFragment extends Fragment implements
     protected boolean mAddressRequested;
     protected String mAddressOutput;
     private AddressResultReceiver mResultReceiver;
+    static boolean mIsClickOnMap = false;
+    static LatLng mStartPos;
+    static LatLng mEndPos;
+    private Marker mMarkerStart;
+    private Marker mMarkerEnd;
     static final int ID_POS_START = 1;
     static final int ID_POS_END = 2;
     static int btnID = ID_POS_START;
@@ -188,7 +196,9 @@ public class LineFragment extends Fragment implements
             @Override
             public void onClick(View v) {
                 btnID = ID_POS_START;
-                fetchAddressButtonHandler();
+                mIsClickOnMap = false;
+                mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+                getCurrentAddress();
             }
         });
 
@@ -198,7 +208,9 @@ public class LineFragment extends Fragment implements
             @Override
             public void onClick(View v) {
                 btnID = ID_POS_END;
-                fetchAddressButtonHandler();
+                mIsClickOnMap = false;
+                mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+                getCurrentAddress();
             }
         });
 
@@ -349,15 +361,15 @@ public class LineFragment extends Fragment implements
     @Override
     public void onMapReady(final GoogleMap map) {
         Log.e(TAG, "GoogleMap is ready.");
-        map.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
-
         mMap = map;
+        mMap.setMapType(GoogleMap.MAP_TYPE_HYBRID);
+
         mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
             @Override
             public void onMapClick(LatLng point) {
-                Log.e(TAG, "Put a new marker on POS:" + point.toString());
                 mLastLocation.setLatitude(point.latitude);
                 mLastLocation.setLongitude(point.longitude);
+                mIsClickOnMap = true;
                 getCurrentAddress();
             }
         });
@@ -365,13 +377,20 @@ public class LineFragment extends Fragment implements
         mMap.setOnMarkerDragListener(new GoogleMap.OnMarkerDragListener() {
             @Override
             public void onMarkerDragStart(Marker marker) {
-                marker.hideInfoWindow();
+                //marker.hideInfoWindow();
             }
 
             @Override
             public void onMarkerDragEnd(Marker marker) {
+                if (marker.equals(mMarkerStart)) {
+                    btnID = ID_POS_START;
+                } else {
+                    btnID = ID_POS_END;
+                }
+
                 mLastLocation.setLatitude(marker.getPosition().latitude);
                 mLastLocation.setLongitude(marker.getPosition().longitude);
+                mIsClickOnMap = true;
                 getCurrentAddress();
             }
 
@@ -384,7 +403,7 @@ public class LineFragment extends Fragment implements
         Button btnSat = (Button) rootView.findViewById(R.id.satView);
         btnSat.setOnClickListener(new Button.OnClickListener() {
             public void onClick(View v) {
-                mMap.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
+                mMap.setMapType(GoogleMap.MAP_TYPE_HYBRID);
             }
         });
 
@@ -443,11 +462,6 @@ public class LineFragment extends Fragment implements
         mGoogleApiClient.connect();
     }
 
-    public void fetchAddressButtonHandler() {
-        mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
-        getCurrentAddress();
-    }
-
     public void getCurrentAddress() {
         // We only start the service to fetch the address if GoogleApiClient is connected.
         if (mGoogleApiClient.isConnected() && mLastLocation != null) {
@@ -462,29 +476,69 @@ public class LineFragment extends Fragment implements
     }
 
     protected void displayAddressOutput() {
-        if (btnID == ID_POS_START)
-            tvStartAddress.setText(mAddressOutput);
-        else
-            tvEndAddress.setText(mAddressOutput);
-
-        LatLng pos = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
-        DecimalFormat df = new DecimalFormat("#.0000");
-
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(pos));
-        mMap.animateCamera(CameraUpdateFactory.zoomTo(19));
         mMap.clear();
-        Marker marker = mMap.addMarker(new MarkerOptions()
-                .snippet("Lat(" + df.format(pos.latitude) + ")" +
-                        ", Lng("+ df.format(pos.longitude) + ")")
-                .position(pos)
-                .draggable(true));
+        LatLng pos = new LatLng(mLastLocation.getLatitude(), mLastLocation.getLongitude());
 
-        if (btnID == ID_POS_START) {
-            marker.setTitle("Start Position");
-        } else {
-            marker.setTitle("End Position");
+        if (!mIsClickOnMap) {
+            mMap.moveCamera(CameraUpdateFactory.newLatLng(pos));
+            mMap.animateCamera(CameraUpdateFactory.zoomTo(19));
         }
-        marker.showInfoWindow();
+
+        DecimalFormat df = new DecimalFormat("#.0000");
+        if (btnID == ID_POS_START) {
+            tvStartAddress.setText(mAddressOutput);
+            mStartPos = pos;
+
+            if (mEndPos != null) {
+                mMarkerEnd = mMap.addMarker(new MarkerOptions()
+                        .snippet("Lat(" + df.format(mEndPos.latitude) + ")" +
+                                ", Lng(" + df.format(mEndPos.longitude) + ")")
+                        .position(mEndPos)
+                        .draggable(true)
+                        .title("End Point"));
+                mMarkerEnd.showInfoWindow();
+            }
+
+            mMarkerStart = mMap.addMarker(new MarkerOptions()
+                    .snippet("Lat(" + df.format(pos.latitude) + ")" +
+                            ", Lng(" + df.format(pos.longitude) + ")")
+                    .position(pos)
+                    .draggable(true)
+                    .title("Start Point"));
+            mMarkerStart.showInfoWindow();
+        } else {
+            tvEndAddress.setText(mAddressOutput);
+            mEndPos = pos;
+
+            mMarkerStart = mMap.addMarker(new MarkerOptions()
+                    .snippet("Lat(" + df.format(mStartPos.latitude) + ")" +
+                            ", Lng(" + df.format(mStartPos.longitude) + ")")
+                    .position(mStartPos)
+                    .draggable(true)
+                    .title("Start Point"));
+            mMarkerStart.showInfoWindow();
+
+            mMarkerEnd = mMap.addMarker(new MarkerOptions()
+                    .snippet("Lat(" + df.format(pos.latitude) + ")" +
+                            ", Lng(" + df.format(pos.longitude) + ")")
+                    .position(pos)
+                    .draggable(true)
+                    .title("End Point"));
+            mMarkerEnd.showInfoWindow();
+        }
+
+        if ((mStartPos != null) && (mEndPos != null))
+            drawLine();
+    }
+
+    private void drawLine() {
+        PolylineOptions polylineOpt = new PolylineOptions();
+        polylineOpt.add(mStartPos);
+        polylineOpt.add(mEndPos);
+        polylineOpt.color(Color.RED);
+
+        Polyline polyline = mMap.addPolyline(polylineOpt);
+        polyline.setWidth(5);
     }
 
     private void updateUIWidgets() {
