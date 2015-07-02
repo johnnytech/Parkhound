@@ -3,6 +3,7 @@ package com.parkhound.spuploader;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.TimePickerDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -20,8 +21,6 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -51,51 +50,25 @@ import java.util.Date;
 public class LineFragment extends Fragment implements
         OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
     static final String TAG = "parking street";
+    protected static final String ADDRESS_REQUESTED_KEY = "address-request-pending";
+    protected static final String LOCATION_ADDRESS_KEY = "location-address";
+    private static final String albumName = "CameraSample";
 
-    private SupportMapFragment fragment;
     private static View rootView;
-    private GoogleMap mMap;
 
-    private Button btnSat;
-    private Button btnMap;
+    // Location
     private Button btnPosStart;
     private Button btnPosEnd;
     private TextView startAddressTextView;
     private TextView endAddressTextView;
-
-    protected static final String ADDRESS_REQUESTED_KEY = "address-request-pending";
-    protected static final String LOCATION_ADDRESS_KEY = "location-address";
-
-    /**
-     * Provides the entry point to Google Play services.
-     */
+    private GoogleMap mMap;
     protected GoogleApiClient mGoogleApiClient;
-
-    /**
-     * Represents a geographical location.
-     */
     protected Location mLastLocation;
-
-    /**
-     * Tracks whether the user has requested an address. Becomes true when the user requests an
-     * address and false when the address (or an error message) is delivered.
-     * The user requests an address by pressing the Fetch Address button. This may happen
-     * before GoogleApiClient connects. This activity uses this boolean to keep track of the
-     * user's intent. If the value is true, the activity tries to fetch the address as soon as
-     * GoogleApiClient connects.
-     */
     protected boolean mAddressRequested;
-
-    /**
-     * The formatted location address.
-     */
     protected String mAddressOutput;
-
-    /**
-     * Receiver registered with this activity to get the response from FetchAddressIntentService.
-     */
     private AddressResultReceiver mResultReceiver;
 
+    // Restrictions
     private Spinner mSpinnerSpaceType;
     private Spinner mSpinnerResType;
     private Spinner mSpinnerDur;
@@ -103,24 +76,18 @@ public class LineFragment extends Fragment implements
     private Spinner mSpinnerEndDay;
     private EditText mStartTime;
     private EditText mEndTime;
-    private static final int SHOW_TIMEPICK = 1;
-    private TimePickerDialog timePickerDialog;
 
-    // Photo album for this application
-    private static final String albumName = "CameraSample";
+    // Pictures
+    private boolean bIsButtonPressed = false;
     private File mAlbumDir = null;
     private String mCurrentPhotoPath;
-
-    private boolean bIsButtonPressed = false;
-    private Button btnPicStart;
-    private Button btnPicEnd;
     static final int REQUEST_TAKE_PHOTO = 1;
     private ImageView imgLarge;
     private ImageView mImageViewStart;
     private ImageView mImageViewEnd;
     private final int imageTargetW = 100;
     private final int imageTargetH = 100;
-
+    private Button btnSubmit;
 
     @Override
     public void onAttach(Activity activity) {
@@ -128,10 +95,24 @@ public class LineFragment extends Fragment implements
     }
 
     @Override
+    public void onStart() {
+        super.onStart();
+        mGoogleApiClient.connect();
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        if (mGoogleApiClient.isConnected()) {
+            mGoogleApiClient.disconnect();
+        }
+    }
+
+    @Override
     public View onCreateView(LayoutInflater inflater,
                              ViewGroup container,
                              Bundle savedInstanceState) {
-        if(savedInstanceState == null) {
+        if (savedInstanceState == null) {
             // To avoid tab crash after second entering, remove it before creating it every time.
             if (rootView != null) {
                 ViewGroup parent = (ViewGroup) rootView.getParent();
@@ -139,12 +120,9 @@ public class LineFragment extends Fragment implements
                     parent.removeView(rootView);
             }
 
-            try{
-                //if(rootView == null) {
-                    rootView = inflater.inflate(R.layout.frg_line, container, false);
-                //}
-
-                fragment = (SupportMapFragment) getChildFragmentManager()
+            try {
+                rootView = inflater.inflate(R.layout.frg_line, container, false);
+                SupportMapFragment fragment = (SupportMapFragment) getChildFragmentManager()
                         .findFragmentById(R.id.map);
                 fragment.getMapAsync(this);
             } catch (Exception e) {
@@ -152,10 +130,33 @@ public class LineFragment extends Fragment implements
             }
         }
 
+        updateValuesFromBundle(savedInstanceState);
         initLocation(savedInstanceState);
         initRestrictions();
+        initPictures();
 
         return rootView;
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle savedInstanceState) {
+        savedInstanceState.putBoolean(ADDRESS_REQUESTED_KEY, mAddressRequested);
+        savedInstanceState.putString(LOCATION_ADDRESS_KEY, mAddressOutput);
+        super.onSaveInstanceState(savedInstanceState);
+    }
+
+    // Updates fields based on data stored in the bundle.
+    private void updateValuesFromBundle(Bundle savedInstanceState) {
+        if (savedInstanceState != null) {
+            if (savedInstanceState.keySet().contains(ADDRESS_REQUESTED_KEY)) {
+                mAddressRequested = savedInstanceState.getBoolean(ADDRESS_REQUESTED_KEY);
+            }
+
+            if (savedInstanceState.keySet().contains(LOCATION_ADDRESS_KEY)) {
+                mAddressOutput = savedInstanceState.getString(LOCATION_ADDRESS_KEY);
+                displayAddressOutput();
+            }
+        }
     }
 
     public void initLocation(Bundle savedInstanceState) {
@@ -180,114 +181,28 @@ public class LineFragment extends Fragment implements
             }
         });
 
-        // Set defaults, then update using values stored in the Bundle.
         mAddressRequested = false;
         mAddressOutput = "";
-        updateValuesFromBundle(savedInstanceState);
 
         updateUIWidgets();
         buildGoogleApiClient();
     }
 
     public void initRestrictions() {
-        ArrayAdapter adapter = ArrayAdapter.createFromResource(
-                rootView.getContext(),
-                R.array.spaceType,
-                android.R.layout.simple_spinner_item);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         mSpinnerSpaceType = (Spinner) rootView.findViewById(R.id.spinnerSpaceType);
-        mSpinnerSpaceType.setAdapter(adapter);
-        mSpinnerSpaceType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                //showToast(parent.getItemAtPosition(position).toString());
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-            }
-        });
-
-        adapter = ArrayAdapter.createFromResource(
-                rootView.getContext(),
-                R.array.restrictionType,
-                android.R.layout.simple_spinner_item);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         mSpinnerResType = (Spinner) rootView.findViewById(R.id.spinnerRestrictionType);
-        mSpinnerResType.setAdapter(adapter);
-        mSpinnerResType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                //showToast(parent.getItemAtPosition(position).toString());
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-            }
-        });
-
-        adapter = ArrayAdapter.createFromResource(
-                rootView.getContext(),
-                R.array.duration,
-                android.R.layout.simple_spinner_item);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         mSpinnerDur = (Spinner) rootView.findViewById(R.id.spinnerRestrictionDuration);
-        mSpinnerDur.setAdapter(adapter);
-        mSpinnerDur.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                //showToast(parent.getItemAtPosition(position).toString());
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-            }
-        });
-
-        adapter = ArrayAdapter.createFromResource(
-                rootView.getContext(),
-                R.array.day,
-                android.R.layout.simple_spinner_item);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         mSpinnerStartDay = (Spinner) rootView.findViewById(R.id.spinnerStartDay);
-        mSpinnerStartDay.setAdapter(adapter);
-        mSpinnerStartDay.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                //showToast(parent.getItemAtPosition(position).toString());
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-            }
-        });
-
         mSpinnerEndDay = (Spinner) rootView.findViewById(R.id.spinnerEndDay);
-        mSpinnerEndDay.setAdapter(adapter);
-        mSpinnerEndDay.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                //showToast(parent.getItemAtPosition(position).toString());
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-            }
-        });
 
         mStartTime = (EditText) rootView.findViewById(R.id.editTextStartTime);
         mStartTime.setInputType(InputType.TYPE_NULL);
-        //mStartTime.requestFocus();
         mEndTime = (EditText) rootView.findViewById(R.id.editTextEndTime);
         mEndTime.setInputType(InputType.TYPE_NULL);
 
         mStartTime.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                //Message msg = new Message();
-                //msg.what = SHOW_TIMEPICK;
-                //timeHandler.sendMessage(msg);
-
                 TimePickerDialog timePickerDialog = new TimePickerDialog(rootView.getContext(),
                         new TimePickerDialog.OnTimeSetListener() {
                     public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
@@ -313,20 +228,118 @@ public class LineFragment extends Fragment implements
                 timePickerDialog.show();
             }
         });
+
+        updateRestrictions();
     }
 
-    /*
-    private Handler timeHandler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            switch (msg.what) {
-                case SHOW_TIMEPICK:
-                    timePickerDialog.show();
-                    break;
+    public void updateRestrictions() {
+        btnSubmit = (Button) rootView.findViewById(R.id.btnSubmit);
+        btnSubmit.setOnClickListener(new Button.OnClickListener() {
+            public void onClick(View v) {
+                LayoutInflater inflater = LayoutInflater.from(rootView.getContext());
+                View uploadDialog = inflater.inflate(R.layout.dialog_upload, null);
+
+                TextView info = (TextView) uploadDialog.findViewById(R.id.textViewResInfo);
+                info.setText("Restrictions: " + mSpinnerResType.getSelectedItem().toString() +
+                        ", " + mSpinnerDur.getSelectedItem().toString() +
+                        ", " + mSpinnerStartDay.getSelectedItem().toString() +
+                        "-" + mSpinnerEndDay.getSelectedItem().toString() +
+                        ", " + mStartTime.getText() + "-" + mEndTime.getText());
+                info = (TextView) uploadDialog.findViewById(R.id.textViewFreeInfo);
+                info.setText("Free: ");
+
+                info = (TextView) uploadDialog.findViewById(R.id.textViewStartPointPos);
+                info.setText("Start Pos: " + "(" + mLastLocation.getLatitude() + ", " +
+                        mLastLocation.getLongitude() + ")");
+                info = (TextView) uploadDialog.findViewById(R.id.textViewStartPointAddress);
+                info.setText("Start Address: ");
+
+                info = (TextView) uploadDialog.findViewById(R.id.textViewEndPointPos);
+                info.setText("End Pos: " + "(" + mLastLocation.getLatitude() + ", " +
+                        mLastLocation.getLongitude() + ")");
+                info = (TextView) uploadDialog.findViewById(R.id.textViewEndPointAddress);
+                info.setText("Start Address: ");
+
+                final AlertDialog dialog = new AlertDialog.Builder(rootView.getContext()).create();
+                dialog.setTitle("Upload Park Info");
+                dialog.setButton(DialogInterface.BUTTON_POSITIVE, "Confirm", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                });
+                dialog.setButton(DialogInterface.BUTTON_NEGATIVE, "Cancel", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                });
+                dialog.setView(uploadDialog);
+                dialog.show();
             }
+        });
+    }
+
+    public void initPictures() {
+        Button btnPicStart = (Button) rootView.findViewById(R.id.btnStartPic);
+        btnPicStart.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dispatchTakePictureIntent();
+            }
+        });
+
+        Button btnPicEnd = (Button) rootView.findViewById(R.id.btnEndPic);
+        btnPicEnd.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dispatchTakePictureIntent();
+            }
+        });
+
+        mImageViewStart = (ImageView) rootView.findViewById(R.id.imageViewStart);
+        mImageViewStart.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View paramView) {
+                LayoutInflater inflater = LayoutInflater.from(rootView.getContext());
+                View imgEntryView = inflater.inflate(R.layout.dialog_photo_entry, null);
+                final AlertDialog dialog = new AlertDialog.Builder(rootView.getContext()).create();
+                imgLarge = (ImageView) imgEntryView.findViewById(R.id.largeImage);
+                BitmapFactory.Options bmOptions = new BitmapFactory.Options();
+
+                // Decode the image file into a Bitmap sized to fill the View
+                bmOptions.inJustDecodeBounds = false;
+                bmOptions.inSampleSize = 1;
+
+                Bitmap bitmap = BitmapFactory.decodeFile(mCurrentPhotoPath, bmOptions);
+                imgLarge.setImageBitmap(bitmap);
+                imgLarge.setVisibility(View.VISIBLE);
+
+                dialog.setView(imgEntryView);
+                dialog.show();
+                imgEntryView.setOnClickListener(new View.OnClickListener() {
+                    public void onClick(View paramView) {
+                        dialog.cancel();
+                    }
+                });
+            }
+        });
+
+        mImageViewEnd = (ImageView) rootView.findViewById(R.id.imageViewEnd);
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        switch (requestCode) {
+            case REQUEST_TAKE_PHOTO: {
+                if (resultCode == android.support.v4.app.FragmentActivity.RESULT_OK) {
+                    handleCameraPhoto();
+                }
+                break;
+            }
+            default:
+                break;
         }
-    };
-    */
+    }
 
     @Override
     public void onMapReady(final GoogleMap map) {
@@ -363,14 +376,14 @@ public class LineFragment extends Fragment implements
 
         });
 
-        btnSat = (Button) rootView.findViewById(R.id.satView);
+        Button btnSat = (Button) rootView.findViewById(R.id.satView);
         btnSat.setOnClickListener(new Button.OnClickListener() {
             public void onClick(View v){
                 mMap.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
             }
         });
 
-        btnMap = (Button) rootView.findViewById(R.id.mapView);
+        Button btnMap = (Button) rootView.findViewById(R.id.mapView);
         btnMap.setOnClickListener(new Button.OnClickListener() {
             public void onClick(View v) {
                 mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
@@ -378,133 +391,36 @@ public class LineFragment extends Fragment implements
         });
     }
 
-    @Override
-    public void onActivityCreated(Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
-
-        btnPicStart = (Button) rootView.findViewById(R.id.btnStartPic);
-        btnPicStart.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                dispatchTakePictureIntent();
-            }
-        });
-
-        mImageViewStart = (ImageView) rootView.findViewById(R.id.imageViewStart);
-        mImageViewStart.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View paramView) {
-                LayoutInflater inflater = LayoutInflater.from(rootView.getContext());
-                View imgEntryView = inflater.inflate(R.layout.dialog_photo_entry, null);
-                final AlertDialog dialog = new AlertDialog.Builder(rootView.getContext()).create();
-                imgLarge = (ImageView)imgEntryView.findViewById(R.id.largeImage);
-                BitmapFactory.Options bmOptions = new BitmapFactory.Options();
-
-                // Decode the image file into a Bitmap sized to fill the View
-                bmOptions.inJustDecodeBounds = false;
-                bmOptions.inSampleSize = 1;
-
-                Bitmap bitmap = BitmapFactory.decodeFile(mCurrentPhotoPath, bmOptions);
-                imgLarge.setImageBitmap(bitmap);
-                imgLarge.setVisibility(View.VISIBLE);
-
-                dialog.setView(imgEntryView);
-                dialog.show();
-                imgEntryView.setOnClickListener(new View.OnClickListener() {
-                    public void onClick(View paramView) {
-                        dialog.cancel();
-                    }
-                });
-            }
-        });
-
-        btnPicStart = (Button) rootView.findViewById(R.id.btnStartPic);
-        btnPicStart.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                dispatchTakePictureIntent();
-            }
-        });
-
-        mImageViewEnd = (ImageView) rootView.findViewById(R.id.imageViewEnd);
-        btnPicEnd = (Button) rootView.findViewById(R.id.btnEndPic);
-        btnPicEnd.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                dispatchTakePictureIntent();
-            }
-        });
+    // Builds a GoogleApiClient. Uses {@code #addApi} to request the LocationServices API.
+    protected synchronized void buildGoogleApiClient() {
+        mGoogleApiClient = new GoogleApiClient.Builder(rootView.getContext())
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .addApi(LocationServices.API)
+                .build();
     }
 
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        switch (requestCode) {
-            case REQUEST_TAKE_PHOTO: {
-                if (resultCode == android.support.v4.app.FragmentActivity.RESULT_OK) {
-                    handleCameraPhoto();
-                }
-                break;
-            }
-            default:
-                break;
-        }
-    }
-
-    @Override
-    public void onStart() {
-        super.onStart();
-        mGoogleApiClient.connect();
-    }
-
-    @Override
-    public void onStop() {
-        super.onStop();
-        if (mGoogleApiClient.isConnected()) {
-            mGoogleApiClient.disconnect();
-        }
-    }
-
-    /**
-     * Runs when a GoogleApiClient object successfully connects.
-     */
+    // Runs when a GoogleApiClient object successfully connects.
     @Override
     public void onConnected(Bundle connectionHint) {
         // Gets the best and most recent location currently available, which may be null
         // in rare cases when a location is not available.
         mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
         if (mLastLocation != null) {
-            // Determine whether a Geocoder is available.
             if (!Geocoder.isPresent()) {
                 Toast.makeText(rootView.getContext(), R.string.no_geocoder_available, Toast.LENGTH_LONG).show();
                 return;
             }
-            // It is possible that the user presses the button to get the address before the
-            // GoogleApiClient object successfully connects. In such a case, mAddressRequested
-            // is set to true, but no attempt is made to fetch the address (see
-            // fetchAddressButtonHandler()) . Instead, we start the intent service here if the
-            // user has requested an address, since we now have a connection to GoogleApiClient.
             startIntentService();
             bIsButtonPressed = true;
         }
     }
 
-    /**
-     * Creates an intent, adds location data to it as an extra, and starts the intent service for
-     * fetching an address.
-     */
+    // Start the intent service for fetching an address.
     protected void startIntentService() {
-        // Create an intent for passing to the intent service responsible for fetching the address.
         Intent intent = new Intent(this.getActivity(), FetchAddressIntentService.class);
-
-        // Pass the result receiver as an extra to the service.
         intent.putExtra(Constants.RECEIVER, mResultReceiver);
-
-        // Pass the location data as an extra to the service.
         intent.putExtra(Constants.LOCATION_DATA_EXTRA, mLastLocation);
-
-        // Start the service. If the service isn't already running, it is instantiated and started
-        // (creating a process for it if needed); if it is running then it remains running. The
-        // service kills itself automatically once all intents are processed.
-        Log.e(TAG, "startIntentService()");
         this.getActivity().startService(intent);
     }
 
@@ -515,7 +431,6 @@ public class LineFragment extends Fragment implements
         Log.e(TAG, "Connection failed: ConnectionResult.getErrorCode() = " + result.getErrorCode());
     }
 
-
     @Override
     public void onConnectionSuspended(int cause) {
         // The connection to Google Play services was lost for some reason. We call connect() to
@@ -524,39 +439,6 @@ public class LineFragment extends Fragment implements
         mGoogleApiClient.connect();
     }
 
-    /**
-     * Updates fields based on data stored in the bundle.
-     */
-    private void updateValuesFromBundle(Bundle savedInstanceState) {
-        if (savedInstanceState != null) {
-            // Check savedInstanceState to see if the address was previously requested.
-            if (savedInstanceState.keySet().contains(ADDRESS_REQUESTED_KEY)) {
-                mAddressRequested = savedInstanceState.getBoolean(ADDRESS_REQUESTED_KEY);
-            }
-            // Check savedInstanceState to see if the location address string was previously found
-            // and stored in the Bundle. If it was found, display the address string in the UI.
-            if (savedInstanceState.keySet().contains(LOCATION_ADDRESS_KEY)) {
-                mAddressOutput = savedInstanceState.getString(LOCATION_ADDRESS_KEY);
-                displayAddressOutput();
-            }
-        }
-    }
-
-    /**
-     * Builds a GoogleApiClient. Uses {@code #addApi} to request the LocationServices API.
-     */
-    protected synchronized void buildGoogleApiClient() {
-        mGoogleApiClient = new GoogleApiClient.Builder(rootView.getContext())
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .addApi(LocationServices.API)
-                .build();
-    }
-
-    /**
-     * Runs when user clicks the Fetch Address button. Starts the service to fetch the address if
-     * GoogleApiClient is connected.
-     */
     public void fetchAddressButtonHandler() {
         mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
         bIsButtonPressed = true;
@@ -576,9 +458,6 @@ public class LineFragment extends Fragment implements
         updateUIWidgets();
     }
 
-    /**
-     * Updates the address in the UI.
-     */
     protected void displayAddressOutput() {
         startAddressTextView.setText(mAddressOutput);
 
@@ -603,9 +482,6 @@ public class LineFragment extends Fragment implements
         marker.showInfoWindow();
     }
 
-    /**
-     * Toggles the visibility of the progress bar. Enables or disables the Fetch Address button.
-     */
     private void updateUIWidgets() {
         if (mAddressRequested) {
             btnPosStart.setEnabled(false);
@@ -614,59 +490,61 @@ public class LineFragment extends Fragment implements
         }
     }
 
-    /**
-     * Shows a toast with the given text.
-     */
     protected void showToast(String text) {
         Toast.makeText(rootView.getContext(), text, Toast.LENGTH_SHORT).show();
     }
 
-    @Override
-    public void onSaveInstanceState(Bundle savedInstanceState) {
-        // Save whether the address has been requested.
-        savedInstanceState.putBoolean(ADDRESS_REQUESTED_KEY, mAddressRequested);
-
-        // Save the address string.
-        savedInstanceState.putString(LOCATION_ADDRESS_KEY, mAddressOutput);
-        super.onSaveInstanceState(savedInstanceState);
-    }
-
-    /**
-     * Receiver for data sent from FetchAddressIntentService.
-     */
     class AddressResultReceiver extends ResultReceiver {
         public AddressResultReceiver(Handler handler) {
             super(handler);
         }
 
-        /**
-         *  Receives data sent from FetchAddressIntentService and updates the UI in MainActivity.
-         */
         @Override
         protected void onReceiveResult(int resultCode, Bundle resultData) {
-
-            // Display the address string or an error message sent from the intent service.
             mAddressOutput = resultData.getString(Constants.RESULT_DATA_KEY);
             displayAddressOutput();
-
-            // Show a toast message if an address was found.
             if (resultCode == Constants.SUCCESS_RESULT) {
                 showToast(getString(R.string.address_found));
             }
-
-            // Reset. Enable the Fetch Address button and stop showing the progress bar.
             mAddressRequested = false;
             updateUIWidgets();
         }
     }
 
+    private void dispatchTakePictureIntent() {
+        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+
+        // Ensure that there's a camera activity to handle the intent
+        if (takePictureIntent.resolveActivity(this.getActivity().getPackageManager()) != null) {
+            File photoFile;
+            try {
+                photoFile = createImageFile();
+                mCurrentPhotoPath = photoFile.getAbsolutePath();
+            } catch (IOException ex) {
+                ex.printStackTrace();
+                photoFile = null;
+                mCurrentPhotoPath = null;
+            }
+            if (photoFile != null) {
+                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(photoFile));
+                startActivityForResult(takePictureIntent, REQUEST_TAKE_PHOTO);
+            }
+        }
+    }
+
+    private File createImageFile() throws IOException {
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String imageFileName = "IMG_" + timeStamp + "_";
+        File albumF = getAlbumDir();
+        File image = File.createTempFile(imageFileName, ".jpg", albumF);
+        return image;
+    }
+
     private File getAlbumDir() {
         File storageDir = null;
-
         if (Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
             storageDir = new File (Environment.getExternalStoragePublicDirectory(
                     Environment.DIRECTORY_PICTURES), albumName);
-
             if (storageDir != null) {
                 if (! storageDir.mkdirs()) {
                     if (! storageDir.exists()){
@@ -676,49 +554,34 @@ public class LineFragment extends Fragment implements
                 }
             }
         }
-
         return storageDir;
-    }
-
-    private File createImageFile() throws IOException {
-        // Create an image file name
-        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        String imageFileName = "IMG_" + timeStamp + "_";
-        File albumF = getAlbumDir();
-        File image = File.createTempFile(imageFileName, ".jpg", albumF);
-        return image;
-    }
-
-    private void dispatchTakePictureIntent() {
-        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-
-        // Ensure that there's a camera activity to handle the intent
-        if (takePictureIntent.resolveActivity(this.getActivity().getPackageManager()) != null) {
-            // Create the File where the photo should go
-            File photoFile;
-            try {
-                photoFile = createImageFile();
-                mCurrentPhotoPath = photoFile.getAbsolutePath();
-            } catch (IOException ex) {
-                // Error occurred while creating the File
-                ex.printStackTrace();
-                photoFile = null;
-                mCurrentPhotoPath = null;
-            }
-            // Continue only if the File was successfully created
-            if (photoFile != null) {
-                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(photoFile));
-                startActivityForResult(takePictureIntent, REQUEST_TAKE_PHOTO);
-            }
-        }
     }
 
     private void handleCameraPhoto() {
         if (mCurrentPhotoPath != null) {
             setPic();
             galleryAddPic();
-            //mCurrentPhotoPath = null;
         }
+    }
+
+    private void setPic() {
+        int targetW = imageTargetW;
+        int targetH = imageTargetH;
+
+        BitmapFactory.Options bmOptions = new BitmapFactory.Options();
+        bmOptions.inJustDecodeBounds = true;
+
+        BitmapFactory.decodeFile(mCurrentPhotoPath, bmOptions);
+        int photoW = bmOptions.outWidth;
+        int photoH = bmOptions.outHeight;
+
+        int scaleFactor = Math.min(photoW/targetW, photoH/targetH);
+        bmOptions.inJustDecodeBounds = false;
+        bmOptions.inSampleSize = scaleFactor;
+
+        Bitmap bitmap = BitmapFactory.decodeFile(mCurrentPhotoPath, bmOptions);
+        mImageViewStart.setImageBitmap(bitmap);
+        mImageViewStart.setVisibility(View.VISIBLE);
     }
 
     private void galleryAddPic() {
@@ -727,32 +590,5 @@ public class LineFragment extends Fragment implements
         Uri contentUri = Uri.fromFile(f);
         mediaScanIntent.setData(contentUri);
         this.getActivity().sendBroadcast(mediaScanIntent);
-    }
-
-    private void setPic() {
-        // Get the dimensions of the View
-        //int targetW = mImageViewStart.getWidth();
-        int targetW = imageTargetW;
-        //int targetH = mImageViewStart.getHeight();
-        int targetH = imageTargetH;
-
-        // Get the dimensions of the bitmap
-        BitmapFactory.Options bmOptions = new BitmapFactory.Options();
-        bmOptions.inJustDecodeBounds = true;
-
-        BitmapFactory.decodeFile(mCurrentPhotoPath, bmOptions);
-        int photoW = bmOptions.outWidth;
-        int photoH = bmOptions.outHeight;
-
-        /* Figure out which way needs to be reduced less */
-        int scaleFactor = Math.min(photoW/targetW, photoH/targetH);
-
-        // Decode the image file into a Bitmap sized to fill the View
-        bmOptions.inJustDecodeBounds = false;
-        bmOptions.inSampleSize = scaleFactor;
-
-        Bitmap bitmap = BitmapFactory.decodeFile(mCurrentPhotoPath, bmOptions);
-        mImageViewStart.setImageBitmap(bitmap);
-        mImageViewStart.setVisibility(View.VISIBLE);
     }
 }

@@ -44,7 +44,7 @@
         <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
             android:orientation="vertical"
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_height="wrap_content">
             <TextView
                 style="@style/AppTheme"
                 android:id="@+id/textViewStartPoint"
@@ -98,6 +98,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:prompt="@string/spaceType"
+                android:entries="@array/spaceType"
                 android:spinnerMode="dialog">
             </Spinner>
             <EditText
@@ -128,6 +129,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:prompt="@string/restrictionType"
+                android:entries="@array/restrictionType"
                 android:spinnerMode="dialog">
             </Spinner>
             <Spinner
@@ -136,6 +138,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:prompt="@string/restrictionDuration"
+                android:entries="@array/duration"
                 android:spinnerMode="dialog">
             </Spinner>
 
@@ -157,6 +160,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:prompt="@string/startDay"
+                    android:entries="@array/day"
                     android:spinnerMode="dialog"
                     android:layout_weight="1">
                 </Spinner>
@@ -187,6 +191,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:prompt="@string/endDay"
+                    android:entries="@array/day"
                     android:spinnerMode="dialog"
                     android:layout_weight="1">
                 </Spinner>
