@@ -50,7 +50,7 @@ public class FetchAddressIntentService extends IntentService {
     protected void onHandleIntent(Intent intent) {
         String errorMessage = "";
 
-        Log.e(TAG, "onHandleIntent()");
+        Log.d(TAG, "onHandleIntent()");
         mReceiver = intent.getParcelableExtra(Constants.RECEIVER);
 
         // Check if receiver was properly registered.
@@ -61,7 +61,7 @@ public class FetchAddressIntentService extends IntentService {
 
         // Get the location passed to this service through an extra.
         Location location = intent.getParcelableExtra(Constants.LOCATION_DATA_EXTRA);
-        Log.e(TAG, "Location " + "(" +location.getLatitude() + location.getLongitude() + ")");
+        Log.d(TAG, "Location " + "(" +location.getLatitude() + ", " + location.getLongitude() + ")");
 
         // Make sure that the location data was really sent over through an extra. If it wasn't,
         // send an error error message and return.
@@ -131,7 +131,7 @@ public class FetchAddressIntentService extends IntentService {
             for(int i = 0; i < address.getMaxAddressLineIndex(); i++) {
                 addressFragments.add(address.getAddressLine(i));
             }
-            Log.i(TAG, getString(R.string.address_found));
+            Log.d(TAG, getString(R.string.address_found));
             deliverResultToReceiver(Constants.SUCCESS_RESULT,
                     TextUtils.join(System.getProperty("line.separator"), addressFragments));
         }
@@ -141,7 +141,7 @@ public class FetchAddressIntentService extends IntentService {
      * Sends a resultCode and message to the receiver.
      */
     private void deliverResultToReceiver(int resultCode, String message) {
-        Log.e(TAG, "deliverResultToReceiver()");
+        Log.d(TAG, "deliverResultToReceiver()");
         Bundle bundle = new Bundle();
         bundle.putString(Constants.RESULT_DATA_KEY, message);
         mReceiver.send(resultCode, bundle);

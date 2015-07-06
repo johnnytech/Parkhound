@@ -53,10 +53,13 @@ import java.util.Date;
 
 
 public class LineFragment extends Fragment implements
-        OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
-    static final String TAG = "parking street";
-    protected static final String ADDRESS_REQUESTED_KEY = "address-request-pending";
-    protected static final String LOCATION_ADDRESS_KEY = "location-address";
+        OnMapReadyCallback,
+        GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener {
+
+    private static final String TAG = "parking street";
+    private static final String ADDRESS_REQUESTED_KEY = "address-request-pending";
+    private static final String LOCATION_ADDRESS_KEY = "location-address";
     private static final String ALBUM_NAME = "CameraSample";
 
     private static View rootView;
@@ -69,19 +72,19 @@ public class LineFragment extends Fragment implements
     private TextView tvEndAddress;
 
     private GoogleMap mMap;
-    protected GoogleApiClient mGoogleApiClient;
-    protected Location mLastLocation;
-    protected boolean mAddressRequested;
-    protected String mAddressOutput;
+    private GoogleApiClient mGoogleApiClient;
+    private Location mLastLocation;
+    private boolean mAddressRequested;
+    private String mAddressOutput;
     private AddressResultReceiver mResultReceiver;
-    static boolean mIsClickOnMap = false;
-    static LatLng mStartPos;
-    static LatLng mEndPos;
+    private boolean mIsClickOnMap = false;
+    private LatLng mStartPos;
+    private LatLng mEndPos;
     private Marker mMarkerStart;
     private Marker mMarkerEnd;
-    static final int ID_POS_START = 1;
-    static final int ID_POS_END = 2;
-    static int btnID = ID_POS_START;
+    private final int ID_POS_START = 1;
+    private final int ID_POS_END = 2;
+    private int btnID = ID_POS_START;
 
     // Restrictions
     private Spinner spinnerSpaceType;
@@ -104,17 +107,20 @@ public class LineFragment extends Fragment implements
     private String mStartTime;
     private String mEndTime;
     private String mPrice;
+    private boolean mIsClickOnFree = false;
+    private final String[] Day = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
 
     // Pictures
-    static final int REQUEST_TAKE_PHOTO = 1;
+    private final int REQUEST_TAKE_PHOTO = 1;
     private final int imageTargetW = 100;
     private final int imageTargetH = 100;
     private ImageView mImageViewStart;
     private ImageView mImageViewEnd;
     private String mCurrentPhotoPath;
-    static final int ID_PIC_START = 1;
-    static final int ID_PIC_END = 2;
-    static int picID = ID_PIC_START;
+    private final int ID_PIC_START = 1;
+    private final int ID_PIC_END = 2;
+    private int picID = ID_PIC_START;
+
 
     @Override
     public void onAttach(Activity activity) {
@@ -264,8 +270,9 @@ public class LineFragment extends Fragment implements
             public void onClick(View view) {
                 TimePickerDialog timePickerDialog = new TimePickerDialog(rootView.getContext(),
                         new TimePickerDialog.OnTimeSetListener() {
-                            public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
-                                etStartTime.setText(new StringBuilder().append(hourOfDay).append(":")
+                            public void onTimeSet(TimePicker view, int hour, int minute) {
+                                etStartTime.setText(new StringBuilder()
+                                        .append((hour < 10) ? "0" + hour : hour).append(":")
                                         .append((minute < 10) ? "0" + minute : minute));
                             }
                         }, 0, 0, false);
@@ -279,8 +286,9 @@ public class LineFragment extends Fragment implements
             public void onClick(View view) {
                 TimePickerDialog timePickerDialog = new TimePickerDialog(rootView.getContext(),
                         new TimePickerDialog.OnTimeSetListener() {
-                            public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
-                                etEndTime.setText(new StringBuilder().append(hourOfDay).append(":")
+                            public void onTimeSet(TimePicker view, int hour, int minute) {
+                                etEndTime.setText(new StringBuilder()
+                                        .append((hour < 10) ? "0" + hour : hour).append(":")
                                         .append((minute < 10) ? "0" + minute : minute));
                             }
                         }, 0, 0, false);
@@ -291,14 +299,15 @@ public class LineFragment extends Fragment implements
         btnFree = (Button) rootView.findViewById(R.id.btnFree);
         btnFree.setOnClickListener(new Button.OnClickListener() {
             public void onClick(View v) {
-                updateRestrictionInfo(true);
+                mIsClickOnFree = true;
+                setFreeRestriction();
             }
         });
 
         btnAddRestrictioins = (Button) rootView.findViewById(R.id.btnAddRestriction);
         btnAddRestrictioins.setOnClickListener(new Button.OnClickListener() {
             public void onClick(View v) {
-                addRestrictions();
+                addRestrictionItem();
             }
         });
 
@@ -360,7 +369,7 @@ public class LineFragment extends Fragment implements
 
     @Override
     public void onMapReady(final GoogleMap map) {
-        Log.e(TAG, "GoogleMap is ready.");
+        Log.d(TAG, "GoogleMap is ready.");
         mMap = map;
         mMap.setMapType(GoogleMap.MAP_TYPE_HYBRID);
 
@@ -493,18 +502,14 @@ public class LineFragment extends Fragment implements
                 mMarkerEnd = mMap.addMarker(new MarkerOptions()
                         .snippet("Lat(" + df.format(mEndPos.latitude) + ")" +
                                 ", Lng(" + df.format(mEndPos.longitude) + ")")
-                        .position(mEndPos)
-                        .draggable(true)
-                        .title("End Point"));
+                        .position(mEndPos).draggable(true).title("End Point"));
                 mMarkerEnd.showInfoWindow();
             }
 
             mMarkerStart = mMap.addMarker(new MarkerOptions()
                     .snippet("Lat(" + df.format(pos.latitude) + ")" +
                             ", Lng(" + df.format(pos.longitude) + ")")
-                    .position(pos)
-                    .draggable(true)
-                    .title("Start Point"));
+                    .position(pos).draggable(true).title("Start Point"));
             mMarkerStart.showInfoWindow();
         } else {
             tvEndAddress.setText(mAddressOutput);
@@ -513,28 +518,24 @@ public class LineFragment extends Fragment implements
             mMarkerStart = mMap.addMarker(new MarkerOptions()
                     .snippet("Lat(" + df.format(mStartPos.latitude) + ")" +
                             ", Lng(" + df.format(mStartPos.longitude) + ")")
-                    .position(mStartPos)
-                    .draggable(true)
-                    .title("Start Point"));
+                    .position(mStartPos).draggable(true).title("Start Point"));
             mMarkerStart.showInfoWindow();
 
             mMarkerEnd = mMap.addMarker(new MarkerOptions()
                     .snippet("Lat(" + df.format(pos.latitude) + ")" +
                             ", Lng(" + df.format(pos.longitude) + ")")
-                    .position(pos)
-                    .draggable(true)
-                    .title("End Point"));
+                    .position(pos).draggable(true).title("End Point"));
             mMarkerEnd.showInfoWindow();
         }
 
         if ((mStartPos != null) && (mEndPos != null))
-            drawLine();
+            drawLine(mStartPos, mEndPos);
     }
 
-    private void drawLine() {
+    private void drawLine(LatLng pos1, LatLng pos2) {
         PolylineOptions polylineOpt = new PolylineOptions();
-        polylineOpt.add(mStartPos);
-        polylineOpt.add(mEndPos);
+        polylineOpt.add(pos1);
+        polylineOpt.add(pos2);
         polylineOpt.color(Color.RED);
 
         Polyline polyline = mMap.addPolyline(polylineOpt);
@@ -574,20 +575,97 @@ public class LineFragment extends Fragment implements
         }
     }
 
-    public void updateRestrictionInfo (boolean free) {
-        if (free) {
-            spinnerStartDay.setSelection(0);
-            spinnerEndDay.setSelection(0);
-            etStartTime.setText("0.00");
-            etEndTime.setText("0.00");
-            etPrice.setText("0.0");
-        }
-
-        getRestrictionInfo();
+    public void setFreeRestriction() {
+        spinnerResType.setSelection(0);
+        spinnerStartDay.setSelection(0);
+        spinnerEndDay.setSelection(6);
+        etStartTime.setText("00:00");
+        etEndTime.setText("00:00");
+        etPrice.setText("0.00");
     }
 
-    public void addRestrictions() {
-        getRestrictionInfo();
+    public String getRestrictionItem() {
+        mSpaceType = spinnerSpaceType.getSelectedItem().toString();
+        mResType = spinnerResType.getSelectedItem().toString();
+        mResDur = spinnerDur.getSelectedItem().toString();
+        mStartDay = spinnerStartDay.getSelectedItem().toString();
+        mEndDay = spinnerEndDay.getSelectedItem().toString();
+
+        mStartTime = etStartTime.getText().toString();
+        if (mStartTime.equals(""))
+            mStartTime = "00:00";
+
+        mEndTime = etEndTime.getText().toString();
+        if (mEndTime.equals(""))
+            mEndTime = "00:00";
+
+        mPrice = etPrice.getText().toString();
+        if (mPrice.equals(""))
+            mPrice = "0.00";
+
+        return mResType + ", " + mResDur + ", " + mStartDay + "-" + mEndDay + ", " +
+                    mStartTime + "-" + mEndTime;
+    }
+
+    public String calFreeDuration(String type) {
+        String freeDur;
+        int pos1 = spinnerStartDay.getSelectedItemPosition();
+        int pos2 = spinnerEndDay.getSelectedItemPosition();
+        int newPos1 = ((pos1 == 0) ? (Day.length - 1) : (pos1 - 1));
+        int newPos2 = ((pos2 == Day.length - 1) ? (0) : (pos2 + 1));
+
+        if (mStartTime.equals("00:00") && mEndTime.equals("00:00")) {
+            freeDur = Day[newPos2] + "-" + Day[newPos1] + ", " + "00:00-00:00";
+        } else {
+            String[] time1 = mStartTime.split(":");
+            String[] time2 = mEndTime.split(":");
+            String newHour1, newMin1;
+            String newHour2, newMin2;
+
+            if (time1[1].equals("00")) {
+                newMin1 = "59";
+                if (time1[0].equals("00")) {
+                    newHour1 = "23";
+                } else {
+                    int hour = Integer.parseInt(time1[0]) - 1;
+                    newHour1 = (hour < 10 ? "0" + hour : hour) + "";
+                }
+            } else {
+                int min = Integer.parseInt(time1[1]) - 1;
+                newMin1 = (min < 10 ? "0" + min : min) + "";
+                newHour1 = time1[0];
+            }
+
+            if (time2[1].equals("59")) {
+                newMin2 = "00";
+                if (time2[0].equals("23")) {
+                    newHour2 = "00";
+                } else {
+                    int hour = Integer.parseInt(time2[0]) + 1;
+                    newHour2 = (hour < 10 ? "0" + hour : hour) + "";
+                }
+            } else {
+                int min = Integer.parseInt(time2[1]) + 1;
+                newMin2 = (min < 10 ? "0" + min : min) + "";
+                newHour2 = time2[0];
+            }
+
+            freeDur = Day[pos1] + "-" + Day[pos2] + ", " + newHour2 + ":" + newMin2 + "-" + newHour1 + ":" + newMin1 +
+                    "\n" + Day[newPos2] + "-" + Day[newPos1] + ", " + "00:00-00:00";
+        }
+
+        return freeDur;
+    }
+
+    public void addRestrictionItem() {
+        String resDur = getRestrictionItem();
+        String freeDur = calFreeDuration(mResType);
+
+        if (mIsClickOnFree) {
+            mIsClickOnFree = false;
+            resDur = "None";
+            freeDur = "Monday-Sunday, 00:00-00.00";
+        }
 
         LayoutInflater inflater = LayoutInflater.from(rootView.getContext());
         View uploadDialog = inflater.inflate(R.layout.dialog_upload, null);
@@ -608,12 +686,11 @@ public class LineFragment extends Fragment implements
 
         TextView info = (TextView) uploadDialog.findViewById(R.id.textViewResInfo);
         info.setText(Html.fromHtml("<b>Restriction: </b>"));
-        info.append("\n" + mResType + ", " + mResDur + ", " +
-                mStartDay + "-" + mEndDay + ", " + mStartTime + "-" + mEndTime);
+        info.append("\n" + resDur);
 
         info = (TextView) uploadDialog.findViewById(R.id.textViewFreeInfo);
         info.setText(Html.fromHtml("<b>Free Duration: </b>"));
-        info.append("\n" + mStartDay + "-" + mEndDay);
+        info.append("\n" + freeDur);
 
         info = (TextView) uploadDialog.findViewById(R.id.textViewPrice);
         info.setText(Html.fromHtml("<b>Price: </b>" + mPrice + " AUD/Hour"));
@@ -634,17 +711,6 @@ public class LineFragment extends Fragment implements
         });
         dialog.setView(uploadDialog);
         dialog.show();
-    }
-
-    public void getRestrictionInfo () {
-        mSpaceType = spinnerSpaceType.getSelectedItem().toString();
-        mResType = spinnerResType.getSelectedItem().toString();
-        mResDur = spinnerDur.getSelectedItem().toString();
-        mStartDay = spinnerStartDay.getSelectedItem().toString();
-        mEndDay = spinnerEndDay.getSelectedItem().toString();
-        mStartTime = etStartTime.getText().toString();
-        mEndTime = etEndTime.getText().toString();
-        mPrice = etPrice.getText().toString();
     }
 
     public void uploadParkInfo() {
