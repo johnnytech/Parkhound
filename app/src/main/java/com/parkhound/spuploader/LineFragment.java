@@ -301,7 +301,7 @@ public class LineFragment extends Fragment implements
         btnSubmit = (Button) rootView.findViewById(R.id.btnSubmit);
         btnSubmit.setOnClickListener(new Button.OnClickListener() {
             public void onClick(View v) {
-                uploadParkInfo();
+                submitParkInfo();
             }
         });
     }
@@ -567,7 +567,7 @@ public class LineFragment extends Fragment implements
         final EditText setTime = (EditText)view;
 
         LayoutInflater inflater = LayoutInflater.from(rootView.getContext());
-        View timeDialog = inflater.inflate(R.layout.dialog_time, null);
+        View timeDialog = inflater.inflate(R.layout.dialog_set_time, null);
         TimePicker time = (TimePicker)timeDialog.findViewById(R.id.timePicker);
         time.setCurrentHour(0);
         time.setCurrentMinute(0);
@@ -620,31 +620,17 @@ public class LineFragment extends Fragment implements
         }
 
         LayoutInflater inflater = LayoutInflater.from(rootView.getContext());
-        View uploadDialog = inflater.inflate(R.layout.dialog_upload, null);
+        View addResItemDialog = inflater.inflate(R.layout.dialog_add_restrictions, null);
 
-        /*
-        info = (TextView) uploadDialog.findViewById(R.id.textViewStartPointPos);
-        info.setText("Start Pos: " + "(" + mLastLocation.getLatitude() + ", " +
-                mLastLocation.getLongitude() + ")");
-        info = (TextView) uploadDialog.findViewById(R.id.textViewStartPointAddress);
-        info.setText("Start Address: ");
-
-        info = (TextView) uploadDialog.findViewById(R.id.textViewEndPointPos);
-        info.setText("End Pos: " + "(" + mLastLocation.getLatitude() + ", " +
-                mLastLocation.getLongitude() + ")");
-        info = (TextView) uploadDialog.findViewById(R.id.textViewEndPointAddress);
-        info.setText("Start Address: ");
-        */
-
-        TextView info = (TextView) uploadDialog.findViewById(R.id.textViewResInfo);
+        TextView info = (TextView) addResItemDialog.findViewById(R.id.textViewResInfo);
         info.setText(Html.fromHtml("<b>Restriction: </b>"));
         info.append("\n" + resDur);
 
-        info = (TextView) uploadDialog.findViewById(R.id.textViewFreeInfo);
+        info = (TextView) addResItemDialog.findViewById(R.id.textViewFreeInfo);
         info.setText(Html.fromHtml("<b>Free Duration: </b>"));
         info.append("\n" + freeDur);
 
-        info = (TextView) uploadDialog.findViewById(R.id.textViewPrice);
+        info = (TextView) addResItemDialog.findViewById(R.id.textViewPrice);
         info.setText(Html.fromHtml("<b>Price: </b>" + mPrice + " AUD/Hour"));
 
         AlertDialog dialog = new AlertDialog.Builder(rootView.getContext()).create();
@@ -662,7 +648,7 @@ public class LineFragment extends Fragment implements
                 dialog.dismiss();
             }
         });
-        dialog.setView(uploadDialog);
+        dialog.setView(addResItemDialog);
         dialog.show();
     }
 
@@ -739,10 +725,31 @@ public class LineFragment extends Fragment implements
         return freeDur;
     }
 
-    public void uploadParkInfo() {
+    public void submitParkInfo() {
+        LayoutInflater inflater = LayoutInflater.from(rootView.getContext());
+        View submitDialog = inflater.inflate(R.layout.dialog_submit, null);
+
+        TextView info = (TextView) submitDialog.findViewById(R.id.textViewLineID);
+        info.setText(Html.fromHtml("<b>Line ID: " + lineID + "</b>"));
+
+        info = (TextView) submitDialog.findViewById(R.id.textViewStartPointPos);
+        info.setText(Html.fromHtml("<b>Start Point: </b>"));
+        if (mStartPos != null)
+            info.append("(" + mStartPos.latitude + ", " + mStartPos.longitude + ")");
+        info = (TextView) submitDialog.findViewById(R.id.textViewStartPointAddress);
+        info.setText(Html.fromHtml("<b>Address: </b>"));
+        info.append("\n" + tvStartAddress.getText());
+
+        info = (TextView) submitDialog.findViewById(R.id.textViewEndPointPos);
+        info.setText(Html.fromHtml("<b>Start Point: </b>"));
+        if (mEndPos != null)
+            info.append("(" + mEndPos.latitude + ", " + mEndPos.longitude + ")");
+        info = (TextView) submitDialog.findViewById(R.id.textViewEndPointAddress);
+        info.setText(Html.fromHtml("<b>Address: </b>"));
+        info.append("\n" + tvEndAddress.getText());
+
         final AlertDialog dialog = new AlertDialog.Builder(rootView.getContext()).create();
-        dialog.setTitle("UPLOAD PARK INFO");
-        dialog.setMessage("Upload Line ID: " + lineID);
+        dialog.setTitle("Submit Park Info");
         dialog.setButton(DialogInterface.BUTTON_POSITIVE, "Confirm", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
@@ -756,6 +763,7 @@ public class LineFragment extends Fragment implements
                 dialog.dismiss();
             }
         });
+        dialog.setView(submitDialog);
         dialog.show();
     }
 
@@ -848,7 +856,7 @@ public class LineFragment extends Fragment implements
 
     private void enlargePic() {
         LayoutInflater inflater = LayoutInflater.from(rootView.getContext());
-        View imgEntryView = inflater.inflate(R.layout.dialog_photo_entry, null);
+        View imgEntryView = inflater.inflate(R.layout.dialog_zoomin_photo, null);
 
         // Decode the image file into a Bitmap sized to fill the View
         BitmapFactory.Options bmOptions = new BitmapFactory.Options();
