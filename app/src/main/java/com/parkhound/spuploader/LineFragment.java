@@ -2,7 +2,6 @@ package com.parkhound.spuploader;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.TimePickerDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -27,6 +26,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.NumberPicker;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.TimePicker;
@@ -47,8 +47,10 @@ import com.google.android.gms.maps.model.PolylineOptions;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 
 
@@ -107,8 +109,11 @@ public class LineFragment extends Fragment implements
     private String mStartTime;
     private String mEndTime;
     private String mPrice;
-    private boolean mIsClickOnFree = false;
     private final String[] Day = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
+    private ArrayList<String> mRestrictions;
+    private String resDur;
+    private String freeDur;
+    private String getTime = "00:00";
 
     // Pictures
     private final int REQUEST_TAKE_PHOTO = 1;
@@ -268,46 +273,28 @@ public class LineFragment extends Fragment implements
         etStartTime.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                TimePickerDialog timePickerDialog = new TimePickerDialog(rootView.getContext(),
-                        new TimePickerDialog.OnTimeSetListener() {
-                            public void onTimeSet(TimePicker view, int hour, int minute) {
-                                etStartTime.setText(new StringBuilder()
-                                        .append((hour < 10) ? "0" + hour : hour).append(":")
-                                        .append((minute < 10) ? "0" + minute : minute));
-                            }
-                        }, 0, 0, false);
-
-                timePickerDialog.show();
+                setTimeDialog(etStartTime);
             }
         });
 
         etEndTime.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                TimePickerDialog timePickerDialog = new TimePickerDialog(rootView.getContext(),
-                        new TimePickerDialog.OnTimeSetListener() {
-                            public void onTimeSet(TimePicker view, int hour, int minute) {
-                                etEndTime.setText(new StringBuilder()
-                                        .append((hour < 10) ? "0" + hour : hour).append(":")
-                                        .append((minute < 10) ? "0" + minute : minute));
-                            }
-                        }, 0, 0, false);
-                timePickerDialog.show();
+                setTimeDialog(etEndTime);
             }
         });
 
         btnFree = (Button) rootView.findViewById(R.id.btnFree);
         btnFree.setOnClickListener(new Button.OnClickListener() {
             public void onClick(View v) {
-                mIsClickOnFree = true;
-                setFreeRestriction();
+                addRestrictionItem(true);
             }
         });
 
         btnAddRestrictioins = (Button) rootView.findViewById(R.id.btnAddRestriction);
         btnAddRestrictioins.setOnClickListener(new Button.OnClickListener() {
             public void onClick(View v) {
-                addRestrictionItem();
+                addRestrictionItem(false);
             }
         });
 
@@ -575,13 +562,108 @@ public class LineFragment extends Fragment implements
         }
     }
 
-    public void setFreeRestriction() {
-        spinnerResType.setSelection(0);
-        spinnerStartDay.setSelection(0);
-        spinnerEndDay.setSelection(6);
-        etStartTime.setText("00:00");
-        etEndTime.setText("00:00");
-        etPrice.setText("0.00");
+    public void setTimeDialog(View view) {
+        final String[] disMin = new String[] {"00", "15", "30", "45"};
+        final EditText setTime = (EditText)view;
+
+        LayoutInflater inflater = LayoutInflater.from(rootView.getContext());
+        View timeDialog = inflater.inflate(R.layout.dialog_time, null);
+        TimePicker time = (TimePicker)timeDialog.findViewById(R.id.timePicker);
+        time.setCurrentHour(0);
+        time.setCurrentMinute(0);
+        try {
+            Field f = time.getClass().getDeclaredField("mMinuteSpinner"); // NoSuchFieldException
+            f.setAccessible(true);
+            NumberPicker minutes = (NumberPicker) f.get(time); // IllegalAccessException
+            if (null != minutes)
+            {
+                minutes.setMinValue(0);
+                minutes.setMaxValue(3);
+                minutes.setDisplayedValues(disMin);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, e.toString());
+        }
+
+        time.setOnTimeChangedListener(new TimePicker.OnTimeChangedListener() {
+            public void onTimeChanged(TimePicker view, int hour, int minute) {
+                getTime = ((hour < 10) ? "0" + hour : hour) + ":" + disMin[minute];
+            }
+        });
+
+        AlertDialog dialog = new AlertDialog.Builder(rootView.getContext()).create();
+        dialog.setTitle("Set Time");
+        dialog.setButton(DialogInterface.BUTTON_POSITIVE, "Confirm", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                setTime.setText(getTime);
+                dialog.dismiss();
+            }
+        });
+        dialog.setButton(DialogInterface.BUTTON_NEGATIVE, "Cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+            }
+        });
+        dialog.setView(timeDialog);
+        dialog.show();
+    }
+
+    public void addRestrictionItem(boolean free) {
+        if (free) {
+            resDur = "None";
+            freeDur = "Monday-Sunday, 00:00-00:00";
+        } else {
+            resDur = getRestrictionItem();
+            freeDur = calFreeDuration();
+        }
+
+        LayoutInflater inflater = LayoutInflater.from(rootView.getContext());
+        View uploadDialog = inflater.inflate(R.layout.dialog_upload, null);
+
+        /*
+        info = (TextView) uploadDialog.findViewById(R.id.textViewStartPointPos);
+        info.setText("Start Pos: " + "(" + mLastLocation.getLatitude() + ", " +
+                mLastLocation.getLongitude() + ")");
+        info = (TextView) uploadDialog.findViewById(R.id.textViewStartPointAddress);
+        info.setText("Start Address: ");
+
+        info = (TextView) uploadDialog.findViewById(R.id.textViewEndPointPos);
+        info.setText("End Pos: " + "(" + mLastLocation.getLatitude() + ", " +
+                mLastLocation.getLongitude() + ")");
+        info = (TextView) uploadDialog.findViewById(R.id.textViewEndPointAddress);
+        info.setText("Start Address: ");
+        */
+
+        TextView info = (TextView) uploadDialog.findViewById(R.id.textViewResInfo);
+        info.setText(Html.fromHtml("<b>Restriction: </b>"));
+        info.append("\n" + resDur);
+
+        info = (TextView) uploadDialog.findViewById(R.id.textViewFreeInfo);
+        info.setText(Html.fromHtml("<b>Free Duration: </b>"));
+        info.append("\n" + freeDur);
+
+        info = (TextView) uploadDialog.findViewById(R.id.textViewPrice);
+        info.setText(Html.fromHtml("<b>Price: </b>" + mPrice + " AUD/Hour"));
+
+        AlertDialog dialog = new AlertDialog.Builder(rootView.getContext()).create();
+        dialog.setTitle("Add Restriction");
+        dialog.setButton(DialogInterface.BUTTON_POSITIVE, "Confirm", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                //mRestrictions.add(resDur);
+                dialog.dismiss();
+            }
+        });
+        dialog.setButton(DialogInterface.BUTTON_NEGATIVE, "Cancel", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+            }
+        });
+        dialog.setView(uploadDialog);
+        dialog.show();
     }
 
     public String getRestrictionItem() {
@@ -604,10 +686,10 @@ public class LineFragment extends Fragment implements
             mPrice = "0.00";
 
         return mResType + ", " + mResDur + ", " + mStartDay + "-" + mEndDay + ", " +
-                    mStartTime + "-" + mEndTime;
+                mStartTime + "-" + mEndTime;
     }
 
-    public String calFreeDuration(String type) {
+    public String calFreeDuration() {
         String freeDur;
         int pos1 = spinnerStartDay.getSelectedItemPosition();
         int pos2 = spinnerEndDay.getSelectedItemPosition();
@@ -655,62 +737,6 @@ public class LineFragment extends Fragment implements
         }
 
         return freeDur;
-    }
-
-    public void addRestrictionItem() {
-        String resDur = getRestrictionItem();
-        String freeDur = calFreeDuration(mResType);
-
-        if (mIsClickOnFree) {
-            mIsClickOnFree = false;
-            resDur = "None";
-            freeDur = "Monday-Sunday, 00:00-00.00";
-        }
-
-        LayoutInflater inflater = LayoutInflater.from(rootView.getContext());
-        View uploadDialog = inflater.inflate(R.layout.dialog_upload, null);
-
-        /*
-        info = (TextView) uploadDialog.findViewById(R.id.textViewStartPointPos);
-        info.setText("Start Pos: " + "(" + mLastLocation.getLatitude() + ", " +
-                mLastLocation.getLongitude() + ")");
-        info = (TextView) uploadDialog.findViewById(R.id.textViewStartPointAddress);
-        info.setText("Start Address: ");
-
-        info = (TextView) uploadDialog.findViewById(R.id.textViewEndPointPos);
-        info.setText("End Pos: " + "(" + mLastLocation.getLatitude() + ", " +
-                mLastLocation.getLongitude() + ")");
-        info = (TextView) uploadDialog.findViewById(R.id.textViewEndPointAddress);
-        info.setText("Start Address: ");
-        */
-
-        TextView info = (TextView) uploadDialog.findViewById(R.id.textViewResInfo);
-        info.setText(Html.fromHtml("<b>Restriction: </b>"));
-        info.append("\n" + resDur);
-
-        info = (TextView) uploadDialog.findViewById(R.id.textViewFreeInfo);
-        info.setText(Html.fromHtml("<b>Free Duration: </b>"));
-        info.append("\n" + freeDur);
-
-        info = (TextView) uploadDialog.findViewById(R.id.textViewPrice);
-        info.setText(Html.fromHtml("<b>Price: </b>" + mPrice + " AUD/Hour"));
-
-        final AlertDialog dialog = new AlertDialog.Builder(rootView.getContext()).create();
-        dialog.setTitle("Add Restriction");
-        dialog.setButton(DialogInterface.BUTTON_POSITIVE, "Confirm", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.dismiss();
-            }
-        });
-        dialog.setButton(DialogInterface.BUTTON_NEGATIVE, "Cancel", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.dismiss();
-            }
-        });
-        dialog.setView(uploadDialog);
-        dialog.show();
     }
 
     public void uploadParkInfo() {
