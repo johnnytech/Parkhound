@@ -78,6 +78,7 @@ public class LineFragment extends Fragment implements
     private Location mLastLocation;
     private boolean mAddressRequested;
     private String mAddressOutput;
+    private char mState;
     private AddressResultReceiver mResultReceiver;
     private boolean mIsClickOnMap = false;
     private LatLng mStartPos;
@@ -94,6 +95,7 @@ public class LineFragment extends Fragment implements
     private Spinner spinnerDur;
     private Spinner spinnerStartDay;
     private Spinner spinnerEndDay;
+    private EditText etSpaceNum;
     private EditText etStartTime;
     private EditText etEndTime;
     private EditText etPrice;
@@ -102,6 +104,7 @@ public class LineFragment extends Fragment implements
     private Button btnSubmit;
 
     private String mSpaceType;
+    private String mSpaceNum;
     private String mResType;
     private String mResDur;
     private String mStartDay;
@@ -264,6 +267,7 @@ public class LineFragment extends Fragment implements
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerEndDay.setAdapter(adapter);
 
+        etSpaceNum = (EditText) rootView.findViewById(R.id.editTextSpaceNumber);
         etStartTime = (EditText) rootView.findViewById(R.id.editTextStartTime);
         etStartTime.setInputType(InputType.TYPE_NULL);
         etEndTime = (EditText) rootView.findViewById(R.id.editTextEndTime);
@@ -552,7 +556,10 @@ public class LineFragment extends Fragment implements
 
         @Override
         protected void onReceiveResult(int resultCode, Bundle resultData) {
-            mAddressOutput = resultData.getString(Constants.RESULT_DATA_KEY);
+            String info[] = resultData.getString(Constants.RESULT_DATA_KEY).split("::");
+            mAddressOutput = info[0].trim();
+            mState = info[1].charAt(0);
+
             displayAddressOutput();
             if (resultCode == Constants.SUCCESS_RESULT) {
                 showToast(getString(R.string.address_found));
@@ -659,6 +666,8 @@ public class LineFragment extends Fragment implements
         mStartDay = spinnerStartDay.getSelectedItem().toString();
         mEndDay = spinnerEndDay.getSelectedItem().toString();
 
+        mSpaceNum = etSpaceNum.getText().toString();
+
         mStartTime = etStartTime.getText().toString();
         if (mStartTime.equals(""))
             mStartTime = "00:00";
@@ -729,24 +738,27 @@ public class LineFragment extends Fragment implements
         LayoutInflater inflater = LayoutInflater.from(rootView.getContext());
         View submitDialog = inflater.inflate(R.layout.dialog_submit, null);
 
+        DecimalFormat df = new DecimalFormat("#0000");
         TextView info = (TextView) submitDialog.findViewById(R.id.textViewLineID);
-        info.setText(Html.fromHtml("<b>Line ID: " + lineID + "</b>"));
+        info.setText(Html.fromHtml("<b>Line ID: </b>" + mState + "_" + df.format(lineID)));
 
+        info = (TextView) submitDialog.findViewById(R.id.textViewSpaceType);
+        info.setText(Html.fromHtml("<b>Space: </b>" + mSpaceType + ", " + mSpaceNum));
+
+        df = new DecimalFormat("#.000000");
         info = (TextView) submitDialog.findViewById(R.id.textViewStartPointPos);
         info.setText(Html.fromHtml("<b>Start Point: </b>"));
         if (mStartPos != null)
-            info.append("(" + mStartPos.latitude + ", " + mStartPos.longitude + ")");
+            info.append("( " + df.format(mStartPos.latitude) + ", " + df.format(mStartPos.longitude) + " )");
         info = (TextView) submitDialog.findViewById(R.id.textViewStartPointAddress);
-        info.setText(Html.fromHtml("<b>Address: </b>"));
-        info.append("\n" + tvStartAddress.getText());
+        info.setText(tvStartAddress.getText());
 
         info = (TextView) submitDialog.findViewById(R.id.textViewEndPointPos);
-        info.setText(Html.fromHtml("<b>Start Point: </b>"));
+        info.setText(Html.fromHtml("<b>End Point: </b>"));
         if (mEndPos != null)
-            info.append("(" + mEndPos.latitude + ", " + mEndPos.longitude + ")");
+            info.append("( " + df.format(mEndPos.latitude) + ", " + df.format(mEndPos.longitude) + " )");
         info = (TextView) submitDialog.findViewById(R.id.textViewEndPointAddress);
-        info.setText(Html.fromHtml("<b>Address: </b>"));
-        info.append("\n" + tvEndAddress.getText());
+        info.setText(tvEndAddress.getText());
 
         final AlertDialog dialog = new AlertDialog.Builder(rootView.getContext()).create();
         dialog.setTitle("Submit Park Info");

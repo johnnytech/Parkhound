@@ -26,6 +26,7 @@
     <string name="btnFree">FREE 24/7</string>
     <string name="btnAddRestriction">Add Restriction</string>
     <string name="btnSubmit">Submit</string>
+    <string name="address">Address:</string>
 
     <string name="numberOfSpaces">Number of spaces</string>
     <string name="startTime">Start time</string>

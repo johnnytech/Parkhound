@@ -13,7 +13,7 @@
         android:layout_margin="10dp"/>
     <TextView
         style="@style/AppTheme"
-        android:id="@+id/textViewStartPointPos"
+        android:id="@+id/textViewSpaceType"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginLeft="10dp"
@@ -21,12 +21,35 @@
         android:layout_marginTop="10dp"/>
     <TextView
         style="@style/AppTheme"
-        android:id="@+id/textViewStartPointAddress"
+        android:id="@+id/textViewStartPointPos"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginLeft="10dp"
         android:layout_marginRight="10dp"
-        android:layout_marginBottom="10dp"/>
+        android:layout_marginTop="10dp"/>
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <TextView
+            style="@style/AppTheme"
+            android:id="@+id/address"
+            android:text="@string/address"
+            android:textStyle="bold"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
+            android:layout_marginBottom="10dp"/>
+        <TextView
+            style="@style/AppTheme"
+            android:id="@+id/textViewStartPointAddress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
+            android:layout_marginBottom="10dp"/>
+    </LinearLayout>
     <TextView
         style="@style/AppTheme"
         android:id="@+id/textViewEndPointPos"
@@ -35,13 +58,28 @@
         android:layout_marginLeft="10dp"
         android:layout_marginRight="10dp"
         android:layout_marginTop="10dp"/>
-    <TextView
-        style="@style/AppTheme"
-        android:id="@+id/textViewEndPointAddress"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginLeft="10dp"
-        android:layout_marginRight="10dp"
-        android:layout_marginBottom="10dp"/>
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <TextView
+            style="@style/AppTheme"
+            android:id="@id/address"
+            android:text="@string/address"
+            android:textStyle="bold"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
+            android:layout_marginBottom="10dp"/>
+        <TextView
+            style="@style/AppTheme"
+            android:id="@+id/textViewEndPointAddress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
+            android:layout_marginBottom="10dp"/>
+    </LinearLayout>
 
 </LinearLayout>
