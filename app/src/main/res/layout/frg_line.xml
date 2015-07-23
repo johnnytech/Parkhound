@@ -105,6 +105,8 @@
                 style="@style/AppTheme"
                 android:id="@+id/editTextSpaceNumber"
                 android:inputType="number"
+                android:imeOptions="actionDone"
+                android:maxLength="3"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@string/numberOfSpaces"/>
@@ -207,6 +209,8 @@
                 style="@style/AppTheme"
                 android:id="@+id/editTextPrice"
                 android:inputType="numberDecimal"
+                android:imeOptions="actionDone"
+                android:maxLength="5"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@string/price"/>

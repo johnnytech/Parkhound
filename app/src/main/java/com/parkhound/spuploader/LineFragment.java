@@ -2,8 +2,10 @@ package com.parkhound.spuploader;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -48,10 +50,14 @@ import com.google.android.gms.maps.model.PolylineOptions;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 
 public class LineFragment extends Fragment implements
@@ -99,16 +105,9 @@ public class LineFragment extends Fragment implements
     private EditText etStartTime;
     private EditText etEndTime;
     private EditText etPrice;
-    private Button btnFree;
-    private Button btnAddRestrictioins;
-    private Button btnSubmit;
 
     private String mSpaceType;
     private String mSpaceNum;
-    private String mResType;
-    private String mResDur;
-    private String mStartDay;
-    private String mEndDay;
     private String mStartTime;
     private String mEndTime;
     private String mPrice;
@@ -120,11 +119,11 @@ public class LineFragment extends Fragment implements
 
     // Pictures
     private final int REQUEST_TAKE_PHOTO = 1;
-    private final int imageTargetW = 100;
-    private final int imageTargetH = 100;
     private ImageView mImageViewStart;
     private ImageView mImageViewEnd;
     private String mCurrentPhotoPath;
+    private File mStartPointPic;
+    private File mEndPointPic;
     private final int ID_PIC_START = 1;
     private final int ID_PIC_END = 2;
     private int picID = ID_PIC_START;
@@ -288,21 +287,21 @@ public class LineFragment extends Fragment implements
             }
         });
 
-        btnFree = (Button) rootView.findViewById(R.id.btnFree);
+        Button btnFree = (Button) rootView.findViewById(R.id.btnFree);
         btnFree.setOnClickListener(new Button.OnClickListener() {
             public void onClick(View v) {
                 addRestrictionItem(true);
             }
         });
 
-        btnAddRestrictioins = (Button) rootView.findViewById(R.id.btnAddRestriction);
+        Button btnAddRestrictioins = (Button) rootView.findViewById(R.id.btnAddRestriction);
         btnAddRestrictioins.setOnClickListener(new Button.OnClickListener() {
             public void onClick(View v) {
                 addRestrictionItem(false);
             }
         });
 
-        btnSubmit = (Button) rootView.findViewById(R.id.btnSubmit);
+        Button btnSubmit = (Button) rootView.findViewById(R.id.btnSubmit);
         btnSubmit.setOnClickListener(new Button.OnClickListener() {
             public void onClick(View v) {
                 submitParkInfo();
@@ -660,13 +659,18 @@ public class LineFragment extends Fragment implements
     }
 
     public String getRestrictionItem() {
+        String mResType;
+        String mResDur;
+        String mStartDay;
+        String mEndDay;
+
         mSpaceType = spinnerSpaceType.getSelectedItem().toString();
+        mSpaceNum = etSpaceNum.getText().toString();
+
         mResType = spinnerResType.getSelectedItem().toString();
         mResDur = spinnerDur.getSelectedItem().toString();
         mStartDay = spinnerStartDay.getSelectedItem().toString();
         mEndDay = spinnerEndDay.getSelectedItem().toString();
-
-        mSpaceNum = etSpaceNum.getText().toString();
 
         mStartTime = etStartTime.getText().toString();
         if (mStartTime.equals(""))
@@ -735,36 +739,72 @@ public class LineFragment extends Fragment implements
     }
 
     public void submitParkInfo() {
+        SharedPreferences mSubmitData;
+        final Map<String, String> mParams = new HashMap<>();
+        final Map<String, File> mFiles = new HashMap<>();
+
         LayoutInflater inflater = LayoutInflater.from(rootView.getContext());
         View submitDialog = inflater.inflate(R.layout.dialog_submit, null);
 
         DecimalFormat df = new DecimalFormat("#0000");
-        TextView info = (TextView) submitDialog.findViewById(R.id.textViewLineID);
-        info.setText(Html.fromHtml("<b>Line ID: </b>" + mState + "_" + df.format(lineID)));
+        String data = mState + "_" + df.format(lineID);
 
+        TextView info = (TextView) submitDialog.findViewById(R.id.textViewLineID);
+        info.setText(Html.fromHtml("<b>Line ID: </b>" + data));
+
+        mSubmitData = rootView.getContext().
+                getSharedPreferences("StreetParking_" + data, Context.MODE_PRIVATE);
+        final SharedPreferences.Editor editor = mSubmitData.edit();
+        editor.putString("ID", data);
+        mParams.put("ID", data);
+
+        editor.putString("SpaceType", mSpaceType);
+        editor.putString("SpaceNumber", mSpaceNum);
+        mParams.put("SpaceType", mSpaceType);
+        mParams.put("SpaceNumber", mSpaceNum);
         info = (TextView) submitDialog.findViewById(R.id.textViewSpaceType);
         info.setText(Html.fromHtml("<b>Space: </b>" + mSpaceType + ", " + mSpaceNum));
 
         df = new DecimalFormat("#.000000");
         info = (TextView) submitDialog.findViewById(R.id.textViewStartPointPos);
         info.setText(Html.fromHtml("<b>Start Point: </b>"));
-        if (mStartPos != null)
+        if (mStartPos != null) {
+            editor.putString("StartPoint", mStartPos.latitude + ", " + mStartPos.longitude);
             info.append("( " + df.format(mStartPos.latitude) + ", " + df.format(mStartPos.longitude) + " )");
+        }
+        editor.putString("StartAddress", tvStartAddress.getText().toString());
+        mParams.put("StartAddress", tvStartAddress.getText().toString());
         info = (TextView) submitDialog.findViewById(R.id.textViewStartPointAddress);
         info.setText(tvStartAddress.getText());
 
         info = (TextView) submitDialog.findViewById(R.id.textViewEndPointPos);
         info.setText(Html.fromHtml("<b>End Point: </b>"));
-        if (mEndPos != null)
+        if (mEndPos != null) {
+            editor.putString("EndPoint", mEndPos.latitude + ", " + mEndPos.longitude);
             info.append("( " + df.format(mEndPos.latitude) + ", " + df.format(mEndPos.longitude) + " )");
+        }
+        editor.putString("EndAddress", tvEndAddress.getText().toString());
+        mParams.put("EndAddress", tvEndAddress.getText().toString());
         info = (TextView) submitDialog.findViewById(R.id.textViewEndPointAddress);
         info.setText(tvEndAddress.getText());
+
+        editor.putString("Restrictions", resDur);
+        editor.putString("FreeDuration", freeDur);
+        editor.putString("Price", mPrice);
+        mParams.put("Restrictions", resDur);
+        mParams.put("FreeDuration", freeDur);
+        mParams.put("Price", mPrice);
+
+        mFiles.put("StartPointPic", mStartPointPic);
+        mFiles.put("EndPointPic", mEndPointPic);
 
         final AlertDialog dialog = new AlertDialog.Builder(rootView.getContext()).create();
         dialog.setTitle("Submit Park Info");
         dialog.setButton(DialogInterface.BUTTON_POSITIVE, "Confirm", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
+                editor.apply();
+                uploadFile(mParams, mFiles);
                 lineID++;
                 dialog.dismiss();
             }
@@ -772,11 +812,24 @@ public class LineFragment extends Fragment implements
         dialog.setButton(DialogInterface.BUTTON_NEGATIVE, "Cancel", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
+                editor.clear();
                 dialog.dismiss();
             }
         });
         dialog.setView(submitDialog);
         dialog.show();
+    }
+
+    private void uploadFile(Map<String, String> params, Map<String, File> files) {
+        Log.d(TAG, "uploadFile()");
+
+        try {
+            URL url = new URL("https://selfsolve.apple.com/wcResults.do");
+            UploadDataTask task = new UploadDataTask(params, files);
+            task.execute(url);
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
     }
 
     private void dispatchTakePictureIntent() {
@@ -833,8 +886,8 @@ public class LineFragment extends Fragment implements
     }
 
     private void setPic() {
-        int targetW = imageTargetW;
-        int targetH = imageTargetH;
+        final int imageTargetW = 100;
+        final int imageTargetH = 100;
 
         BitmapFactory.Options bmOptions = new BitmapFactory.Options();
         bmOptions.inJustDecodeBounds = true;
@@ -843,7 +896,7 @@ public class LineFragment extends Fragment implements
         int photoW = bmOptions.outWidth;
         int photoH = bmOptions.outHeight;
 
-        int scaleFactor = Math.min(photoW/targetW, photoH/targetH);
+        int scaleFactor = Math.min(photoW/imageTargetW, photoH/imageTargetH);
         bmOptions.inJustDecodeBounds = false;
         bmOptions.inSampleSize = scaleFactor;
 
