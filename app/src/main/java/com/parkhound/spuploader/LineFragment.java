@@ -824,8 +824,8 @@ public class LineFragment extends Fragment implements
         Log.d(TAG, "uploadFile()");
 
         try {
-            URL url = new URL("https://selfsolve.apple.com/wcResults.do");
-            UploadDataTask task = new UploadDataTask(params, files);
+            URL url = new URL("http://posttestserver.com/post.php");
+            UploadDataTask task = new UploadDataTask(params, files, rootView.getContext());
             task.execute(url);
         } catch (MalformedURLException e) {
             e.printStackTrace();
@@ -905,9 +905,11 @@ public class LineFragment extends Fragment implements
         if (picID == ID_PIC_START) {
             mImageViewStart.setImageBitmap(bitmap);
             mImageViewStart.setVisibility(View.VISIBLE);
+            mStartPointPic = new File(mCurrentPhotoPath);
         } else {
             mImageViewEnd.setImageBitmap(bitmap);
             mImageViewEnd.setVisibility(View.VISIBLE);
+            mEndPointPic = new File(mCurrentPhotoPath);
         }
     }
 
