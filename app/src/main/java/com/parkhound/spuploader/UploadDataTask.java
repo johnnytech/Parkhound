@@ -6,9 +6,10 @@ import android.content.Context;
 import android.os.AsyncTask;
 import android.util.Log;
 
+import org.json.JSONObject;
+
 import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -20,12 +21,12 @@ import java.util.Map;
 public class UploadDataTask extends AsyncTask<URL, Integer, String> {
     private static final String TAG = "parking street";
 
-    private Map<String, String> mParams;
+    private JSONObject mParams;
     private Map<String, File> mFiles;
     private Context mContext;
     private ProgressDialog mDialog;
 
-    UploadDataTask(Map<String, String> params, Map<String, File> files, Context context) {
+    UploadDataTask(JSONObject params, Map<String, File> files, Context context) {
         mParams = params;
         mFiles = files;
         mContext = context;
@@ -68,22 +69,16 @@ public class UploadDataTask extends AsyncTask<URL, Integer, String> {
             DataOutputStream outStream = new DataOutputStream(stream);
 
             // construct the txt part
-            Log.d(TAG, "construct the head part");
+            Log.d(TAG, "construct the txt part, mParams=" + mParams.toString());
             StringBuilder sb = new StringBuilder();
-            for (Map.Entry<String, String> entry : mParams.entrySet()) {
-                sb.append(PREFIX);
-                sb.append(BOUNDARY);
-                sb.append(LINEND);
-                sb.append("Content-Disposition: form-data; name=\"" + entry.getKey() + "\"" + LINEND);
-                sb.append("Content-Type: text/plain; charset=" + CHARSET + LINEND);
-                sb.append("Content-Transfer-Encoding: 8bit" + LINEND);
-                sb.append(LINEND);
-                sb.append(entry.getValue());
-                sb.append(LINEND);
-            }
+            sb.append(PREFIX);
+            sb.append(BOUNDARY);
+            sb.append(mParams.toString());
+            sb.append(LINEND);
             outStream.write(sb.toString().getBytes());
 
             // send pictures
+            /*
             Log.d(TAG, "sending pictures...");
             if (mFiles != null) {
                 int fileNum = mFiles.size();
@@ -118,7 +113,7 @@ public class UploadDataTask extends AsyncTask<URL, Integer, String> {
                     is.close();
                     outStream.write(LINEND.getBytes());
                 }
-            }
+            }*/
 
             // set end mark
             byte[] end_data = (PREFIX + BOUNDARY + PREFIX + LINEND).getBytes();
@@ -149,7 +144,7 @@ public class UploadDataTask extends AsyncTask<URL, Integer, String> {
 
     @Override
     protected void onPostExecute(String result) {
-        Log.d("onPostExecute", result);
+        Log.d(TAG, result);
         try {
             mDialog.dismiss();
         } catch(Exception e) {

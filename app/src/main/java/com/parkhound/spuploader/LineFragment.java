@@ -2,10 +2,8 @@ package com.parkhound.spuploader;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -47,6 +45,8 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 
+import org.json.JSONObject;
+
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -54,7 +54,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -112,7 +111,8 @@ public class LineFragment extends Fragment implements
     private String mEndTime;
     private String mPrice;
     private final String[] Day = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
-    private ArrayList<String> mRestrictions;
+    private static JSONObject mRestrictions = new JSONObject();
+    private static int mResIndex = 0;
     private String resDur;
     private String freeDur;
     private String getTime = "00:00";
@@ -617,11 +617,12 @@ public class LineFragment extends Fragment implements
     }
 
     public void addRestrictionItem(boolean free) {
+        final JSONObject resItem = getRestrictionItem();
         if (free) {
             resDur = "None";
             freeDur = "Monday-Sunday, 00:00-00:00";
         } else {
-            resDur = getRestrictionItem();
+            resDur = resItem.toString();
             freeDur = calFreeDuration();
         }
 
@@ -640,11 +641,16 @@ public class LineFragment extends Fragment implements
         info.setText(Html.fromHtml("<b>Price: </b>" + mPrice + " AUD/Hour"));
 
         AlertDialog dialog = new AlertDialog.Builder(rootView.getContext()).create();
-        dialog.setTitle("Add Restriction");
+        dialog.setTitle("Add Restriction [" + mResIndex + "]: " + resItem.toString());
         dialog.setButton(DialogInterface.BUTTON_POSITIVE, "Confirm", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                //mRestrictions.add(resDur);
+                try {
+                    mRestrictions.put("" + mResIndex, resItem);
+                    mResIndex++;
+                } catch (Exception e) {
+                    Log.e(TAG, "addRestrictionItem() failed: " + resItem);
+                }
                 dialog.dismiss();
             }
         });
@@ -658,11 +664,12 @@ public class LineFragment extends Fragment implements
         dialog.show();
     }
 
-    public String getRestrictionItem() {
+    public JSONObject getRestrictionItem() {
         String mResType;
         String mResDur;
         String mStartDay;
         String mEndDay;
+        JSONObject resItem = new JSONObject();
 
         mSpaceType = spinnerSpaceType.getSelectedItem().toString();
         mSpaceNum = etSpaceNum.getText().toString();
@@ -684,8 +691,21 @@ public class LineFragment extends Fragment implements
         if (mPrice.equals(""))
             mPrice = "0.00";
 
-        return mResType + ", " + mResDur + ", " + mStartDay + "-" + mEndDay + ", " +
-                mStartTime + "-" + mEndTime;
+        try {
+            resItem.put("type", mResType);
+            resItem.put("max_time", mResDur);
+            resItem.put("valid_day", mStartDay + "-" + mEndDay);
+            resItem.put("valid_time", mStartTime + "-" + mEndTime);
+            resItem.put("price", mPrice);
+        } catch (Exception e) {
+            Log.e(TAG, "getRestrictionItem(): " + e);
+        }
+        Log.d(TAG, "getRestrictionItem(): " + resItem.toString());
+
+        return resItem;
+
+        /*return mResType + ", " + mResDur + ", " + mStartDay + "-" + mEndDay + ", " +
+                mStartTime + "-" + mEndTime;*/
     }
 
     public String calFreeDuration() {
@@ -739,9 +759,8 @@ public class LineFragment extends Fragment implements
     }
 
     public void submitParkInfo() {
-        SharedPreferences mSubmitData;
-        final Map<String, String> mParams = new HashMap<>();
         final Map<String, File> mFiles = new HashMap<>();
+        final JSONObject jObject = new JSONObject();
 
         LayoutInflater inflater = LayoutInflater.from(rootView.getContext());
         View submitDialog = inflater.inflate(R.layout.dialog_submit, null);
@@ -751,17 +770,6 @@ public class LineFragment extends Fragment implements
 
         TextView info = (TextView) submitDialog.findViewById(R.id.textViewLineID);
         info.setText(Html.fromHtml("<b>Line ID: </b>" + data));
-
-        mSubmitData = rootView.getContext().
-                getSharedPreferences("StreetParking_" + data, Context.MODE_PRIVATE);
-        final SharedPreferences.Editor editor = mSubmitData.edit();
-        editor.putString("ID", data);
-        mParams.put("ID", data);
-
-        editor.putString("SpaceType", mSpaceType);
-        editor.putString("SpaceNumber", mSpaceNum);
-        mParams.put("SpaceType", mSpaceType);
-        mParams.put("SpaceNumber", mSpaceNum);
         info = (TextView) submitDialog.findViewById(R.id.textViewSpaceType);
         info.setText(Html.fromHtml("<b>Space: </b>" + mSpaceType + ", " + mSpaceNum));
 
@@ -769,42 +777,43 @@ public class LineFragment extends Fragment implements
         info = (TextView) submitDialog.findViewById(R.id.textViewStartPointPos);
         info.setText(Html.fromHtml("<b>Start Point: </b>"));
         if (mStartPos != null) {
-            editor.putString("StartPoint", mStartPos.latitude + ", " + mStartPos.longitude);
             info.append("( " + df.format(mStartPos.latitude) + ", " + df.format(mStartPos.longitude) + " )");
         }
-        editor.putString("StartAddress", tvStartAddress.getText().toString());
-        mParams.put("StartAddress", tvStartAddress.getText().toString());
         info = (TextView) submitDialog.findViewById(R.id.textViewStartPointAddress);
         info.setText(tvStartAddress.getText());
 
         info = (TextView) submitDialog.findViewById(R.id.textViewEndPointPos);
         info.setText(Html.fromHtml("<b>End Point: </b>"));
         if (mEndPos != null) {
-            editor.putString("EndPoint", mEndPos.latitude + ", " + mEndPos.longitude);
             info.append("( " + df.format(mEndPos.latitude) + ", " + df.format(mEndPos.longitude) + " )");
         }
-        editor.putString("EndAddress", tvEndAddress.getText().toString());
-        mParams.put("EndAddress", tvEndAddress.getText().toString());
         info = (TextView) submitDialog.findViewById(R.id.textViewEndPointAddress);
         info.setText(tvEndAddress.getText());
 
-        editor.putString("Restrictions", resDur);
-        editor.putString("FreeDuration", freeDur);
-        editor.putString("Price", mPrice);
-        mParams.put("Restrictions", resDur);
-        mParams.put("FreeDuration", freeDur);
-        mParams.put("Price", mPrice);
-
         mFiles.put("StartPointPic", mStartPointPic);
         mFiles.put("EndPointPic", mEndPointPic);
+
+        try {
+            jObject.put("ID", data);
+            jObject.put("SpaceNumber", mSpaceNum);
+            jObject.put("SpaceType", mSpaceType);
+            jObject.put("Restrictions", mRestrictions);
+            jObject.put("StartPoint", mStartPos.latitude + ", " + mStartPos.longitude);
+            jObject.put("StartAddress", tvStartAddress.getText().toString());
+            jObject.put("StartPointPic", mStartPointPic.getName());
+            jObject.put("EndPoint", mEndPos.latitude + ", " + mEndPos.longitude);
+            jObject.put("EndAddress", tvEndAddress.getText().toString());
+            jObject.put("EndPointPic", mEndPointPic.getName());
+        } catch (Exception e) {
+            Log.e(TAG, "submitParkInfo(): " + e);
+        }
 
         final AlertDialog dialog = new AlertDialog.Builder(rootView.getContext()).create();
         dialog.setTitle("Submit Park Info");
         dialog.setButton(DialogInterface.BUTTON_POSITIVE, "Confirm", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                editor.apply();
-                uploadFile(mParams, mFiles);
+                uploadFile(jObject, mFiles);
                 lineID++;
                 dialog.dismiss();
             }
@@ -812,7 +821,6 @@ public class LineFragment extends Fragment implements
         dialog.setButton(DialogInterface.BUTTON_NEGATIVE, "Cancel", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-                editor.clear();
                 dialog.dismiss();
             }
         });
@@ -820,11 +828,11 @@ public class LineFragment extends Fragment implements
         dialog.show();
     }
 
-    private void uploadFile(Map<String, String> params, Map<String, File> files) {
+    private void uploadFile(JSONObject params, Map<String, File> files) {
         Log.d(TAG, "uploadFile()");
 
         try {
-            URL url = new URL("http://posttestserver.com/post.php");
+            URL url = new URL("http://dev.parkhound.com.au/api/1.0/poststreetparking.json");
             UploadDataTask task = new UploadDataTask(params, files, rootView.getContext());
             task.execute(url);
         } catch (MalformedURLException e) {
